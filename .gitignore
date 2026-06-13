@@ -1,0 +1,5 @@
+# Dune build
+/_build
+
+# Symlink to executable
+ocaml-sbom

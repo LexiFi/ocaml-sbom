@@ -1,0 +1,5 @@
+; CycloneDX export
+(library
+  (public_name ocaml-sbom.cdx)
+  (name cdx)
+)

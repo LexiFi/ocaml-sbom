@@ -1,0 +1,8 @@
+; Main library used the ocaml-sbom program
+(library
+  (public_name ocaml-sbom)
+  (name sbom)
+  (libraries
+    cdx
+  )
+)

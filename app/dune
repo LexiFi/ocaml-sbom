@@ -1,0 +1,9 @@
+; 'ocaml-sbom' command
+(executable
+  (public_name ocaml-sbom)
+  (name ocaml_sbom)
+  (libraries
+    cmdliner
+    ocaml-sbom
+  )
+)
