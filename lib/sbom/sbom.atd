@@ -1,0 +1,257 @@
+<doc text="Internal representation for an OCaml SBOM generator.
+
+Design rule: model the UNION of what CycloneDX and SPDX can express, never
+the intersection. Each exporter is a TOTAL projection down to one format;
+anything a target format cannot represent natively is routed through a typed
+extension channel (CycloneDX 'properties', SPDX 'annotations') rather than
+silently dropped. The four load-bearing decisions are flagged [D1]..[D4].">
+
+(* ------------------------------------------------------------------ *)
+(* Shared primitives *)
+
+type ('a) known
+  <doc text="[D1] Three-valued 'known' - NOT plain option.
+
+SPDX forces a distinction that option collapses:
+  None_ maps to SPDX 'NONE' (asserted absence, e.g. 'there is no license'),
+  No_assertion maps to SPDX 'NOASSERTION' (not investigated).
+Use this everywhere SPDX cares: licenses, copyrightText, downloadLocation,
+supplier, originator, version.">
+  = [
+  | Known of 'a
+  | None_   <doc text="Asserted absence: SPDX 'NONE'.">
+  | No_assertion   <doc text="Not investigated: SPDX 'NOASSERTION'.">
+]
+
+type origin
+  <doc text="Provenance of a component or field value.
+Apply at component granularity; wrap individual fields in 'sourced'
+only where field-level evidence is needed.
+Used to emit CycloneDX 'evidence' and to track overlay contributions.">
+  = [
+  | Detected <doc text="Detected by an analyzer. The string identifies the tool or detector."> of string
+  | Overlay <doc text="Added or overridden by a hand-written overlay. The string identifies the overlay file or rule."> of string
+  | Computed <doc text="Derived by the generator (e.g. a concluded license).">
+]
+
+type ('a) sourced
+  <doc text="A value annotated with its provenance.">
+  = {
+  value : 'a;
+  origin : origin;
+}
+
+(* ------------------------------------------------------------------ *)
+(* Actors *)
+
+type person = {
+  name : string;
+  ?email : string option;
+}
+
+type organization = {
+  name : string;
+  ?email : string option;
+  ?url : string option;
+}
+
+type actor
+  <doc text="A person or organization.
+SPDX encodes these inline ('Person: name <email>');
+CycloneDX uses structured objects. One type serves both.">
+  = [
+  | Person of person
+  | Organization of organization
+]
+
+(* ------------------------------------------------------------------ *)
+(* Licensing *)
+
+type license_ref
+  <doc text="A non-SPDX license reference,
+emitted as CycloneDX 'license.name' or SPDX 'LicenseRef-'.">
+  = {
+  id : string;
+  ?name : string option;
+}
+
+type license_atom
+  <doc text="A leaf in a license expression tree.">
+  = [
+  | Spdx_id <doc text="An SPDX license identifier, e.g. 'MIT' or 'LGPL-2.1-only'."> of string
+  | License_ref <doc text="A non-SPDX license."> of license_ref
+]
+
+type license_expr
+  <doc text="A license expression AST rather than a raw string.
+Keeping a tree lets the CycloneDX exporter split a pure conjunction into
+individual 'licenses[].license.id' entries (preferred) and fall back to a
+single 'licenses[].expression' for OR/WITH; lets the SPDX exporter emit a
+canonical expression string; and lets non-SPDX licenses flow to the right
+representation in each format.">
+  = [
+  | Atom of license_atom
+  | And of (license_expr * license_expr)
+  | Or of (license_expr * license_expr)
+  | With <doc text="SPDX WITH clause: license WITH exception-id."> of (license_atom * string)
+]
+
+type licensing
+  <doc text="Both the declared and concluded license expressions for a component.
+CycloneDX 1.6+ carries the distinction in 'licenses[].acknowledgement'.">
+  = {
+  declared <doc text="SPDX licenseDeclared / CDX acknowledgement=declared. Typically sourced from opam 'license:'."> : license_expr known;
+  concluded <doc text="SPDX licenseConcluded / CDX acknowledgement=concluded. Asserted by an analyzer or overlay."> : license_expr known;
+}
+
+(* ------------------------------------------------------------------ *)
+(* Integrity *)
+
+type hash_alg
+  <doc text="Hash algorithms. opam exposes md5/sha256/sha512 on source archives;
+both CycloneDX and SPDX cover these.">
+  = [
+  | MD5 | SHA1 | SHA256 | SHA384 | SHA512 | BLAKE2b_256
+]
+
+type hash = {
+  alg : hash_alg;
+  hex : string;
+}
+
+(* ------------------------------------------------------------------ *)
+(* External references *)
+
+type ref_kind
+  <doc text="Classification of an external reference URL.">
+  = [
+  | Vcs
+  | Website
+  | Issue_tracker
+  | Distribution
+  | Documentation
+  | Source_archive
+  | Build_system
+  | Other_ref of string
+]
+
+type external_ref = {
+  kind : ref_kind;
+  url : string;
+  ?comment : string option;
+}
+
+type identifiers
+  <doc text="Package identifiers for cross-tool correlation.
+purl is the primary key; cpe is included for completeness.">
+  = {
+  ?purl <doc text="Package URL, e.g. 'pkg:opam/opam-repository/name@version'. Primary cross-tool key for downstream scanner matching."> : string option;
+  ?cpe <doc text="CPE identifier. Rarely available for opam packages."> : string option;
+}
+
+(* ------------------------------------------------------------------ *)
+(* OCaml-specific extension payload *)
+
+type ocaml_extra
+  <doc text="OCaml-specific metadata that fits neither CycloneDX nor SPDX core schemas.
+Exporters route this to CDX 'properties' (namespaced, e.g. 'ocaml:depext')
+and SPDX 'annotations', so the data survives round-trips.">
+  = {
+  ~findlib_libs <doc text="Findlib library names this opam package provides."> : string list;
+  ~is_depext <doc text="True if surfaced from opam 'depexts'."> : bool;
+  ?depext_system <doc text="System package specification, e.g. 'debian:libgmp-dev'."> : string option;
+  ~vendored <doc text="True if found vendored or pinned rather than installed from the registry."> : bool;
+  ?pin_source <doc text="Git or local pin provenance URI."> : string option;
+  ?dune_component : string option;
+}
+
+(* ------------------------------------------------------------------ *)
+(* Components *)
+
+type comp_kind
+  <doc text="Component classification.">
+  = [
+  | Library
+  | Application
+  | Framework
+  | File
+  | Os_package <doc text="A depext or system-level component.">
+  | Other_comp of string
+]
+
+type component
+  <doc text="An SBOM component: a package, library, or other software artifact.">
+  = {
+  key <doc text="[D2] Stable canonical key. Everything derived (bom-ref, SPDXID) flows from
+this, so output is deterministic and two SBOMs are diffable.
+purl is the natural key; falls back to 'name@version' when no purl exists."> : string;
+  name : string;
+  version <doc text="Package version. Use No_assertion rather than an empty string."> : string known;
+  kind : comp_kind;
+  identifiers : identifiers;
+  supplier <doc text="NTIA minimum element."> : actor known;
+  originator <doc text="SPDX keeps originator distinct from supplier."> : actor known;
+  authors : actor list;
+  licensing : licensing;
+  copyright <doc text="SPDX copyrightText: requires NONE/NOASSERTION rather than absence."> : string known;
+  hashes : hash list;
+  download_location <doc text="SPDX mandatory field. Populated from opam 'url { src }'."> : string known;
+  external_refs : external_ref list;
+  ?description : string option;
+  ocaml <doc text="OCaml-specific extension data routed to format-specific extension channels."> : ocaml_extra;
+  provenance <doc text="Whether this component record originated from a detector or an overlay."> : origin;
+}
+
+(* ------------------------------------------------------------------ *)
+(* Dependency graph *)
+
+type dep_scope
+  <doc text="[D3] Scope lives on the EDGE, not the node.
+CycloneDX: scope is a node attribute (required|optional|excluded)
+  and edges are plain dependsOn.
+SPDX: scope is the edge type (RUNTIME_DEPENDENCY_OF, BUILD_DEPENDENCY_OF,
+  TEST_DEPENDENCY_OF, DEV_DEPENDENCY_OF, OPTIONAL_DEPENDENCY_OF).
+A package can be a build dep of one component and a runtime dep of another,
+so storing scope per-node loses information for SPDX.
+Store it per-edge; derive the CycloneDX node scope by aggregating a
+component's incoming edges.">
+  = [
+  | Runtime
+  | Build
+  | Test
+  | Dev
+  | Optional
+]
+
+type dep_edge = {
+  src <doc text="Component key of the dependent (the package that requires the other)."> : string;
+  dst <doc text="Component key of the dependency (the package being required)."> : string;
+  scope : dep_scope;
+}
+
+(* ------------------------------------------------------------------ *)
+(* Document *)
+
+type lifecycle_phase
+  <doc text="SBOM lifecycle phase, mapped to CycloneDX 'lifecycles'.">
+  = [
+  | Lc_build
+  | Lc_post_build
+  | Lc_operations
+]
+
+type document
+  <doc text="The top-level SBOM document.">
+  = {
+  namespace <doc text="[D4] One namespace/serial seed drives both CDX 'serialNumber' (urn:uuid)
+and SPDX 'documentNamespace' (unique URI), keeping identity consistent
+and - if desired - derivable from content rather than random."> : string;
+  root <doc text="Component key of the project under analysis."> : string;
+  components <doc text="All components including the root."> : component list;
+  edges : dep_edge list;
+  lifecycles : lifecycle_phase list;
+  created <doc text="Unix timestamp of SBOM creation."> : float;
+  creators <doc text="People and the generator tool that produced this document."> : actor list;
+  tool_name : string;
+  tool_version : string;
+}

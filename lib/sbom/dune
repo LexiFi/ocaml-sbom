@@ -1,8 +1,14 @@
-; Main library used the ocaml-sbom program
+; Main library used by the ocaml-sbom program
 (library
   (public_name ocaml-sbom)
   (name sbom)
   (libraries
     cdx
+    yojson
   )
 )
+
+(rule
+  (targets sbom.ml sbom.mli)
+  (deps sbom.atd)
+  (action (run atdml %{deps})))
