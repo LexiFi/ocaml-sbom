@@ -1,5 +1,20 @@
 ; CycloneDX export
+;
+; We only export to Cyclone DX. For best tool compatibility, we export to
+; a slightly older version rather than to the latest.
+;
+; The ATD files were derived automatically from the JSON Schema specs
+; using a patched version of 'jsonschema2atd'
+; (https://github.com/mjambon/jsonschema2atd/tree/cyclonedx-support) which
+; may or may not ending up merged into the upstream jsonschema2atd.
+; The concern is that Claude Code may have done a bad job of reasoning
+; about name conflicts in general. The output for the special case of
+; CycloneDX is fine (well, the OCaml code compiles).
+;
 (library
   (public_name ocaml-sbom.cdx)
   (name cdx)
+  (libraries
+    yojson
+  )
 )
