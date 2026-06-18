@@ -4,7 +4,7 @@
 (generate_opam_files)
 
 (license "ISC")
-(source (github mjambon/testo))
+(source (github LexiFi/ocaml-sbom))
 (homepage "https://github.com/LexiFi/ocaml-sbom")
 (maintainers "Martin Jambon <martin@mjambon.com>")
 (authors

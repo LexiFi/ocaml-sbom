@@ -1,0 +1,10 @@
+; Extract info from Opam, in particular:
+; - parse lockfiles
+; - query the public package repository
+(library
+  (public_name ocaml-sbom.deps)
+  (name deps)
+  (libraries
+    opam-file-format
+  )
+)

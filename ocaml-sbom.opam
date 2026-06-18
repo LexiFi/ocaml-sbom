@@ -8,7 +8,7 @@ maintainer: ["Martin Jambon <martin@mjambon.com>"]
 authors: ["Martin Jambon"]
 license: "ISC"
 homepage: "https://github.com/LexiFi/ocaml-sbom"
-bug-reports: "https://github.com/mjambon/testo/issues"
+bug-reports: "https://github.com/LexiFi/ocaml-sbom/issues"
 depends: [
   "dune" {>= "3.18"}
   "ocaml" {>= "4.14.0"}
@@ -29,5 +29,5 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/mjambon/testo.git"
+dev-repo: "git+https://github.com/LexiFi/ocaml-sbom.git"
 x-maintenance-intent: ["(latest)"]
