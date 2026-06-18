@@ -103,10 +103,24 @@ let simplify_opamfile (lockfile_path : string) (x : F.opamfile) : Dep.t list =
   with Some deps -> deps
      | None -> failwith "missing 'depends' section"
 
+(* TODO: check if opam lock files can contain multiple entries for the
+   same dependency under 'depends'; *)
+let check_duplicates deps =
+  let visited = Hashtbl.create 10 in
+  List.iter (fun (x : Dep.t) ->
+    if Hashtbl.mem visited x.name then
+      failwith
+        (sprintf "unsupported: duplicate entry for dependency %s" x.name)
+    else
+      Hashtbl.add visited x.name ()
+  ) deps
+
 let get_deps lockfile_path =
   try
     let opamfile = OpamParser.FullPos.file lockfile_path in
-    Ok (simplify_opamfile lockfile_path opamfile)
+    let deps = simplify_opamfile lockfile_path opamfile in
+    check_duplicates deps;
+    Ok deps
   with
   | Malformed_lockfile {pos; msg} ->
       Error (
