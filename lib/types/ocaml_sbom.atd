@@ -1,0 +1,208 @@
+<doc text="ocaml-sbom's own format for holding SBOM data
+
+An SBOM component is an opam package.
+">
+
+type document
+  <doc text="The top-level SBOM document">
+  =
+{
+  format_version : string;
+
+  namespace
+    <doc text="UUID - either random or a hash of the input data"> : string;
+
+  root_components
+    <doc text="The collection of components this SBOM is about">
+    : purl list;
+
+  components
+    <doc text="All components including root components">
+    : component list;
+
+  dep_edges : dep_edge list;
+}
+
+type 'a known
+  <doc text="
+    A specialized {{_ option option}} type specialized in indicating
+    whether some optional property is known or unknown. Used by SPDX.
+  ">
+  =
+[
+  | Known of 'a
+  | Known_none
+  | Unknown
+] <json repr="object"> (* YAML-friendly JSON syntax: { "Known" : ... } *)
+
+type component
+  <doc text="An SBOM component">
+  =
+{
+  key : purl;
+  name : string;
+  version : string;
+  kind : component_kind;
+  authors : actor list;
+  licensing : licensing;
+}
+
+type purl
+  <doc text="
+    A PURL is the syntax for a package identifier across popular package
+    managers. It is the preferred component identifier in CycloneDX
+    and also in SPDX starting with SPDX 3.
+
+    Here, we expect an opam PURL as specified at
+    https://github.com/package-url/purl-spec/blob/main/types/opam-definition.json
+
+    An example is {{pkg:opam/ocaml-base-compiler@5.2.0}}.
+  ">
+  = string
+
+type component_kind = [
+  | Opam_package of opam_package_kind option
+  (* Other possibilities: external command, C library, ... *)
+] <json repr="object">
+
+(* This info is optional because we don't know what an opam package
+   provides until it's installed. *)
+type opam_package_kind = {
+  library <doc text="installs at least one OCaml library">: bool;
+  executable <doc text="installs at least one executable">: bool;
+}
+
+type dep_edge = {
+  src
+   <doc text="Component key of the dependent (the package that requires
+              the other)">
+   : purl;
+  dst
+   <doc text="Component key of the dependency (the package being required)">
+   : purl;
+
+  scope : dep_scope;
+}
+
+type dep_scope
+  <doc text="
+    Scope lives on the EDGE, not the node.
+
+    CycloneDX: scope is a node attribute
+    ({{required}}|{{optional}}|{{excluded}})
+    and edges are plain {{dependsOn}}.
+
+    SPDX: scope is the edge type ({{RUNTIME_DEPENDENCY_OF}},
+    {{BUILD_DEPENDENCY_OF}}, {{TEST_DEPENDENCY_OF}}, {{DEV_DEPENDENCY_OF}},
+    {{OPTIONAL_DEPENDENCY_OF}}).
+
+   A package can be a build dep of one component and a runtime dep of another,
+   so storing scope per-node loses information for SPDX.
+   Store it per-edge; derive the CycloneDX node scope by aggregating a
+   component's incoming edges.
+  ">
+  =
+[
+  | Runtime
+  | Build
+  | Test
+  | Dev
+  | Optional
+]
+
+(***********************************************************************)
+(* Actors *)
+(***********************************************************************)
+
+type person = {
+  name : string;
+  ?email : string option;
+}
+
+type organization = {
+  name : string;
+  ?email : string option;
+  ?url : string option;
+}
+
+type actor
+  <doc text="
+    A person or organization.
+
+    Opam doesn't make a distinction but the info can be specified by the user
+    in an overlay.
+
+    SPDX encodes these inline ({{Person: name <email>}});
+    CycloneDX uses structured objects.
+  ">
+  =
+[
+  | Person of person
+  | Organization of organization
+]
+
+(***********************************************************************)
+(* Licensing *)
+(***********************************************************************)
+
+type license_ref
+  <doc text="
+    A non-SPDX license reference, emitted as CycloneDX {{license.name}}
+    or SPDX {{LicenseRef-}}
+  ">
+  =
+{
+  id : string;
+  ?name : string option;
+}
+
+type license_atom
+  <doc text="A leaf in a license expression tree">
+  =
+[
+  | Spdx_id
+      <doc text="An SPDX license identifier, e.g. {{MIT}} or {{LGPL-2.1-only}}">
+      of string
+  | License_ref
+      <doc text="A non-SPDX license">
+      of license_ref
+]
+
+type license_expr
+  <doc text="
+    A license expression AST rather than a raw string
+
+    Keeping a tree lets the CycloneDX exporter split a pure conjunction into
+    individual {{licenses[].license.id}} entries (preferred) and fall back to a
+    single {{licenses[].expression}} for OR/WITH; lets the SPDX exporter emit a
+    canonical expression string; and lets non-SPDX licenses flow to the right
+    representation in each format.
+  ">
+  =
+[
+  | Atom of license_atom
+  | And of (license_expr * license_expr)
+  | Or of (license_expr * license_expr)
+  | With
+      <doc text="SPDX WITH clause: license WITH exception-id">
+      of (license_atom * string)
+]
+
+type licensing
+  <doc text="
+    Both the declared and concluded license expressions for a component
+
+    CycloneDX 1.6+ carries the distinction in {{licenses[].acknowledgement}}.
+  ">
+  =
+{
+  declared
+    <doc text="SPDX licenseDeclared / CDX acknowledgement=declared. Typically
+               sourced from opam {{license:}}">
+  : license_expr known;
+
+  concluded
+     <doc text="SPDX licenseConcluded / CDX acknowledgement=concluded. Asserted
+                by an analyzer or overlay.">
+  : license_expr known;
+}

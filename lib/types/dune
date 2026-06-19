@@ -1,0 +1,27 @@
+; Application-wide types, including notably:
+; - ocaml-sbom's format specification
+; - ocaml-sbom's overlay format specification
+;
+(library
+  (public_name ocaml-sbom.types)
+  (name types)
+  (libraries
+    cdx
+    yojson
+  )
+)
+
+(rule
+  (targets ocaml_sbom.ml ocaml_sbom.mli)
+  (deps ocaml_sbom.atd)
+  (action (run atdml %{deps}))
+)
+
+(rule
+  (targets ocaml_sbom_overlay.ml ocaml_sbom_overlay.mli)
+  (deps ocaml_sbom_overlay.atd)
+  (action (run atdml %{deps}))
+
+; TODO: make this work
+;  (action (chdir %{project_root} (run atdml %{deps})))
+)

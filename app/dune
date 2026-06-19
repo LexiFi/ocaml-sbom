@@ -4,6 +4,6 @@
   (name ocaml_sbom)
   (libraries
     cmdliner
-    ocaml-sbom
+    ocaml-sbom.gen
   )
 )
