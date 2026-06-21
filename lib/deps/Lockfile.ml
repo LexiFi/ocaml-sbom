@@ -11,7 +11,14 @@
 open Printf
 module F = OpamParserTypes.FullPos
 
+(* local exception *)
 exception Malformed_lockfile of { pos: F.pos; msg: string }
+
+type t = {
+  name : string;
+  version : string;
+  deps : Dep.t list;
+}
 
 let error pos msg =
   raise (Malformed_lockfile { pos; msg })
@@ -68,7 +75,7 @@ let extract_version_and_context pos (filters : F.value list) =
    If the dependency is not of the form {= VERSION} or {= VERSION & CONTEXT},
    we emit an error.
 *)
-let simplify_dependency
+let interpret_dependency
     (source : Dep.source)
     ({ pos; pelem = x} : F.value) : Dep.t =
   match x with
@@ -88,14 +95,14 @@ let simplify_dependency
   | _ ->
       error pos "unexpected data in dependency list"
 
-let simplify_opamfile (lockfile_path : string) (x : F.opamfile) : Dep.t list =
-  let source = Dep.Lockfile lockfile_path in
+let interpret_deps ~lockfile_path (x : F.opamfile) : Dep.t list =
+  let source = Dep.Lockfiles [lockfile_path] in
   match x.file_contents |> List.find_map (fun item ->
     match without_pos item with
     | F.Variable ({ pelem = "depends"; _ }, v) ->
         (match without_pos v with
          | F.List { pelem = values; _ } ->
-             Some (List.map (simplify_dependency source) values)
+             Some (List.map (interpret_dependency source) values)
          | _ ->
              None
         )
@@ -115,12 +122,37 @@ let check_duplicates deps =
       Hashtbl.add visited x.name ()
   ) deps
 
-let get_deps lockfile_path =
-  try
-    let opamfile = OpamParser.FullPos.file lockfile_path in
-    let deps = simplify_opamfile lockfile_path opamfile in
-    check_duplicates deps;
-    Ok deps
+let extract_string_field opamfile field_name =
+  List.find_map (fun item ->
+    match without_pos item with
+    | F.Variable ({ pelem = name; _ }, v) when name = field_name ->
+        (match v.pelem with
+         | F.String s -> Some s
+         | _ -> None)
+    | _ -> None
+  ) opamfile.F.file_contents
+
+let get_deps ~lockfile_path opamfile =
+  let deps = interpret_deps ~lockfile_path opamfile in
+  check_duplicates deps;
+  deps
+
+let interpret ~lockfile_path (opamfile : F.opamfile) =
+  let name =
+    match extract_string_field opamfile "name" with
+    | Some n -> n
+    | None -> failwith (sprintf "missing 'name' field in %s" lockfile_path)
+  in
+  let version =
+    match extract_string_field opamfile "version" with
+    | Some v -> v
+    | None -> "dev"
+  in
+  let deps = get_deps ~lockfile_path opamfile in
+  { name; version; deps }
+
+let parse lockfile_path =
+  try Ok (interpret ~lockfile_path (OpamParser.FullPos.file lockfile_path))
   with
   | Malformed_lockfile {pos; msg} ->
       Error (

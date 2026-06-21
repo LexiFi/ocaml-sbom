@@ -7,7 +7,7 @@ open Cmdliner
 (* Shared terms *)
 (****************************************************************************)
 
-let output_term : string option Term.t =
+let output_file_term : string option Term.t =
   let info =
     Arg.info [ "o"; "output" ] ~docv:"FILE"
       ~doc:
@@ -15,28 +15,42 @@ let output_term : string option Term.t =
   in
   Arg.value (Arg.opt (Arg.some Arg.string) None info)
 
+let overlay_file_term : string option Term.t =
+  let info =
+    Arg.info [ "overlay" ] ~docv:"FILE"
+      ~doc:
+        "Use $(docv) to amend the generated SBOM. \
+         See online documentation for syntax and examples."
+  in
+  Arg.value (Arg.opt (Arg.some Arg.file) None info)
+
 (****************************************************************************)
 (* 'gen' subcommand — generate an SBOM from a Dune project *)
 (****************************************************************************)
 
 module Gen = struct
   type conf = {
-    project_root : string;
-    output : string option;
+    project_root : Fpath.t; (* must exist *)
+    output_file : Fpath.t option;
+    overlay_file : Fpath.t option; (* must exist if provided *)
   }
 
   let run (conf : conf) =
-    let oc =
-      match conf.output with
-      | None -> stdout
-      | Some path -> open_out path
-    in
-    (* TODO: walk the Dune project at conf.project_root, collect opam
-       dependencies, build a [Sbom.document], and serialize it as JSON. *)
-    fprintf oc
-      "{ \"_note\": \"gen not yet implemented\", \"project_root\": %S }\n"
-      conf.project_root;
-    if conf.output <> None then close_out oc
+    match
+      Sbom_gen.Gen.generate_sbom
+        ?output_file:conf.output_file
+        ?overlay_file:conf.overlay_file
+        ~project_root:conf.project_root
+        ()
+    with
+    | exception exn ->
+        eprintf "Error: %s\n" (Printexc.to_string exn);
+        flush stderr;
+        exit 1
+    | warnings ->
+        List.iter (fun w -> eprintf "Warning: %s\n" w) warnings;
+        flush stderr;
+        if warnings <> [] then exit 1
 
   let project_root_term : string Term.t =
     let info =
@@ -45,11 +59,17 @@ module Gen = struct
           "Root directory of the Dune project to analyze. Defaults to the \
            current directory."
     in
-    Arg.value (Arg.pos 0 Arg.string "." info)
+    Arg.value (Arg.pos 0 Arg.file "." info)
 
   let cmd_term =
-    let combine project_root output = run { project_root; output } in
-    Term.(const combine $ project_root_term $ output_term)
+    let combine project_root output_file overlay_file =
+      run {
+        project_root = Fpath.v project_root;
+        output_file = Option.map Fpath.v output_file;
+        overlay_file = Option.map Fpath.v overlay_file;
+      }
+    in
+    Term.(const combine $ project_root_term $ output_file_term $ overlay_file_term)
 
   let doc = "generate an SBOM for a Dune project"
 
@@ -138,7 +158,7 @@ module Export = struct
 
   let cmd_term =
     let combine input output format = run { input; output; format } in
-    Term.(const combine $ input_term $ output_term $ format_term)
+    Term.(const combine $ input_term $ output_file_term $ format_term)
 
   let doc = "export an SBOM to a standard format"
 

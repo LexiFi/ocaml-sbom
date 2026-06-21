@@ -2,7 +2,7 @@
 
 type package_namespace = Opam
 
-type source = Lockfile of string
+type source = Lockfiles of string list
 
 type context = {
   install: bool;

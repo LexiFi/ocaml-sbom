@@ -1,0 +1,13 @@
+; Entry point for the generation of an SBOM from a Dune project
+(library
+  (name sbom_gen)
+  (libraries
+    fpath
+    opam-file-format
+    uuidm
+    yojson
+
+    sbom_deps
+    sbom_types
+  )
+)

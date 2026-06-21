@@ -12,7 +12,6 @@
 ; CycloneDX is fine (well, the OCaml code compiles).
 ;
 (library
-  (public_name ocaml-sbom.cdx)
   (name cdx)
   (libraries
     yojson

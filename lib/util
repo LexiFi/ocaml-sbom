@@ -1,0 +1,7 @@
+; General-purpose utilities
+(library
+  (name util)
+  (libraries
+    unix
+  )
+)

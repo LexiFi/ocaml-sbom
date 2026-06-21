@@ -3,8 +3,7 @@
 ; - ocaml-sbom's overlay format specification
 ;
 (library
-  (public_name ocaml-sbom.types)
-  (name types)
+  (name sbom_types)
   (libraries
     cdx
     yojson

@@ -4,6 +4,8 @@
   (name ocaml_sbom)
   (libraries
     cmdliner
-    ocaml-sbom.gen
+    fpath
+
+    sbom_gen
   )
 )
