@@ -4,7 +4,9 @@ module S = Sbom_types.Ocaml_sbom
 let ( / ) = Fpath.( / )
 let ( !! ) = Fpath.to_string
 
-let format_version = "1.0"
+let common_format_version = "1.0"
+let ocaml_sbom_format = "ocaml-sbom/" ^ common_format_version
+let _overlay_format = "ocaml-sbom-overlay/" ^ common_format_version
 
 let context_to_scope (ctx : Sbom_deps.Dep.context) : S.dep_scope =
   let { Sbom_deps.Dep.install = _; build; dev; doc; test } = ctx in
@@ -110,7 +112,7 @@ let generate_sbom ?output_file ?overlay_file ~project_root () =
     ) processed
   in
   let document = S.create_document
-    ~format_version
+    ~format:ocaml_sbom_format
     ~namespace:(Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()))
     ~root_components:(List.map (fun pr -> pr.root_purl) processed)
     ~components:(root_components @ dep_components)

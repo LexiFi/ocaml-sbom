@@ -69,7 +69,10 @@ type document_overlay
   <doc text="Fixes to apply to an SBOM document">
   =
 {
-  format_version : string;
+  format
+    <doc text="Magic number and format version, e.g.
+               {{\"ocaml-sbom-overlay/1.0\"}}">
+    : string;
   ~components : (s.purl, component) elt_patch list;
   ~dep_edges : ((s.purl * s.purl), s.dep_edge) elt_patch list;
 }

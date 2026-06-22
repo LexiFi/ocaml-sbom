@@ -7,7 +7,9 @@ type document
   <doc text="The top-level SBOM document">
   =
 {
-  format_version : string;
+  format
+    <doc text="Magic number and format version, e.g. {{\"ocaml-sbom/1.0\"}}">
+    : string;
 
   namespace
     <doc text="UUID - either random or a hash of the input data"> : string;
