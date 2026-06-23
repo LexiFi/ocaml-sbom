@@ -1,0 +1,19 @@
+; Allow running the tests by invoking 'dune runtest' which also takes
+; care of rebuilding the executable as needed.
+(rule
+ (alias runtest)
+ (package ocaml-sbom)
+ (action
+   (run ./test.exe --chdir ../../..)
+ )
+)
+
+; Build the test executable like an ordinary OCaml executable
+(executable
+ (name test)
+ (libraries
+   testo
+   unix
+   sbom_util
+ )
+)

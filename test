@@ -1,0 +1,5 @@
+#! /usr/bin/env bash
+#
+# Execute a test program built with the Testo library.
+#
+./_build/default/tests/test.exe

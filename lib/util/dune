@@ -1,6 +1,6 @@
 ; General-purpose utilities
 (library
-  (name util)
+  (name sbom_util)
   (libraries
     unix
   )

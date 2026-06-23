@@ -7,6 +7,11 @@ build:
 setup:
 	opam install --deps-only --with-test --with-doc ./*.opam
 
+.PHONY: test
+test:
+	dune build tests/test.exe
+	./test
+
 .PHONY: clean
 clean:
 	dune clean
