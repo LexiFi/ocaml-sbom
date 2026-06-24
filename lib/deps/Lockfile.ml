@@ -11,6 +11,8 @@
 open Printf
 module F = OpamParserTypes.FullPos
 
+let ( !! ) = Fpath.to_string
+
 (* local exception *)
 exception Malformed_lockfile of { pos: F.pos; msg: string }
 
@@ -30,7 +32,7 @@ let extract_version (x : F.value) : string =
   | Prefix_relop ({ pelem = `Eq; _ }, { pelem = String version; _ }) -> version
   | _ -> error x.pos "unexpected package constraint"
 
-let no_context : Dep.context = {
+let no_scope : Dep.scope = {
   install = false;
   build = false;
   dev = false;
@@ -38,7 +40,7 @@ let no_context : Dep.context = {
   test = false;
 }
 
-let all_contexts : Dep.context = {
+let all_scopes : Dep.scope = {
   install = true;
   build = true;
   dev = true;
@@ -46,23 +48,23 @@ let all_contexts : Dep.context = {
   test = true;
 }
 
-let extract_context (x : F.value) : Dep.context =
+let extract_scope (x : F.value) : Dep.scope =
   match x.pelem with
-  | Ident "build" -> { no_context with build = true }
-  | Ident "dev" -> { no_context with dev = true }
-  | Ident "with-doc" -> { no_context with doc = true }
-  | Ident "with-test" -> { no_context with test = true }
+  | Ident "build" -> { no_scope with build = true }
+  | Ident "dev" -> { no_scope with dev = true }
+  | Ident "with-doc" -> { no_scope with doc = true }
+  | Ident "with-test" -> { no_scope with test = true }
   | Ident ident ->
       error x.pos (sprintf "unknown predicate %S" ident)
   | _ ->
       error x.pos "unexpected value"
 
-let extract_version_and_context pos (filters : F.value list) =
+let extract_version_and_scope pos (filters : F.value list) =
   match filters with
-  | [ { pelem = Logop ({ pelem = `And; _ }, version, context); _ } ] ->
-      extract_version version, extract_context context
+  | [ { pelem = Logop ({ pelem = `And; _ }, version, scope); _ } ] ->
+      extract_version version, extract_scope scope
   | [ version ] ->
-      extract_version version, all_contexts
+      extract_version version, all_scopes
   | _ ->
       error pos "unexpected package filters"
 
@@ -72,11 +74,11 @@ let extract_version_and_context pos (filters : F.value list) =
      "base-unix"  {= "base"}
      "ocaml"      {= "5.4.1"}
 
-   If the dependency is not of the form {= VERSION} or {= VERSION & CONTEXT},
+   If the dependency is not of the form {= VERSION} or {= VERSION & SCOPE},
    we emit an error.
 *)
 let interpret_dependency
-    (source : Dep.source)
+    (src_component : Dep.component)
     ({ pos; pelem = x} : F.value) : Dep.t =
   match x with
   | F.Option (name, filters) ->
@@ -86,40 +88,41 @@ let interpret_dependency
         | _ ->
             error name.pos "unexpected data found instead of dependency name"
       in
-      let version, context =
-        extract_version_and_context filters.pos filters.pelem
+      let version, scope =
+        extract_version_and_scope filters.pos filters.pelem
       in
-      { kind = Opam; name; version; context; source }
+      let dst : Dep.component = { kind = Opam; name; version } in
+      { src = src_component; dst; scope }
   | F.String name ->
       error pos (sprintf "missing version for dependency '%s'" name)
   | _ ->
       error pos "unexpected data in dependency list"
 
-let interpret_deps ~lockfile_path (x : F.opamfile) : Dep.t list =
-  let source = Dep.Lockfiles [lockfile_path] in
+let interpret_deps ~lockfile_path ~src (x : F.opamfile) : Dep.t list =
   match x.file_contents |> List.find_map (fun item ->
     match without_pos item with
     | F.Variable ({ pelem = "depends"; _ }, v) ->
         (match without_pos v with
          | F.List { pelem = values; _ } ->
-             Some (List.map (interpret_dependency source) values)
+             Some (List.map (interpret_dependency src) values)
          | _ ->
              None
         )
     | F.Variable _ | F.Section _ -> None)
   with Some deps -> deps
-     | None -> failwith "missing 'depends' section"
+     | None -> failwith ("missing 'depends' section: " ^ !!lockfile_path)
 
 (* TODO: check if opam lock files can contain multiple entries for the
    same dependency under 'depends'; *)
 let check_duplicates deps =
   let visited = Hashtbl.create 10 in
   List.iter (fun (x : Dep.t) ->
-    if Hashtbl.mem visited x.name then
+    if Hashtbl.mem visited x.dst then
       failwith
-        (sprintf "unsupported: duplicate entry for dependency %s" x.name)
+        (sprintf "unsupported: duplicate entry for dependency %s %s"
+           x.dst.name x.dst.version)
     else
-      Hashtbl.add visited x.name ()
+      Hashtbl.add visited x.dst ()
   ) deps
 
 let extract_string_field opamfile field_name =
@@ -132,27 +135,28 @@ let extract_string_field opamfile field_name =
     | _ -> None
   ) opamfile.F.file_contents
 
-let get_deps ~lockfile_path opamfile =
-  let deps = interpret_deps ~lockfile_path opamfile in
+let get_deps ~lockfile_path ~src opamfile =
+  let deps = interpret_deps ~lockfile_path ~src opamfile in
   check_duplicates deps;
   deps
 
-let interpret ~lockfile_path (opamfile : F.opamfile) =
+let interpret ~(lockfile_path : Fpath.t) (opamfile : F.opamfile) =
   let name =
     match extract_string_field opamfile "name" with
     | Some n -> n
-    | None -> failwith (sprintf "missing 'name' field in %s" lockfile_path)
+    | None -> failwith (sprintf "missing 'name' field in %s" !!lockfile_path)
   in
   let version =
     match extract_string_field opamfile "version" with
     | Some v -> v
     | None -> "dev"
   in
-  let deps = get_deps ~lockfile_path opamfile in
+  let src : Dep.component = { kind = Opam; name; version } in
+  let deps = get_deps ~lockfile_path ~src opamfile in
   { name; version; deps }
 
 let parse lockfile_path =
-  try Ok (interpret ~lockfile_path (OpamParser.FullPos.file lockfile_path))
+  try Ok (interpret ~lockfile_path (OpamParser.FullPos.file !!lockfile_path))
   with
   | Malformed_lockfile {pos; msg} ->
       Error (
@@ -165,4 +169,4 @@ let parse lockfile_path =
       )
   | exn ->
       Error (sprintf "cannot parse opam lockfile %S: %s"
-               lockfile_path (Printexc.to_string exn))
+               !!lockfile_path (Printexc.to_string exn))

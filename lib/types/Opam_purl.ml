@@ -23,8 +23,6 @@
 
 open Printf
 
-type t = string
-
 (* opam name constraints, from src/format/opamPackage.ml in the opam source:
    - allowed characters: letters (a-z, A-Z), digits (0-9), '-', '_', '+'
    - must contain at least one letter
@@ -65,4 +63,4 @@ let create ~name ~version =
     Error (sprintf "invalid opam package version: %S" version)
   else
     (* no percent-encoding is needed for valid opam names and versions *)
-    Ok (sprintf "pkg:opam/%s@%s" name version)
+    Ok (Purl.create_t (sprintf "pkg:opam/%s@%s" name version))

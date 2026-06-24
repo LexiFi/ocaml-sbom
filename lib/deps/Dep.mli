@@ -8,33 +8,14 @@
 type package_namespace = Opam
 
 type source =
-  | Lockfiles of string list
+  | Lockfiles of Fpath.t list
     (** relative paths to lockfiles, one per Opam package declared by the
         Dune project *)
-(*
-  | Dry_install of string list
+  | Dry_install of Fpath.t list
     (** relative paths to opam files *)
 
-  TODO: add support for projects without a lockfile but without installing
-  anything either. Read package info by creating a temporary opam switch in
-  a temp folder, then running:
-
-    $ opam install ./*.opam --deps-only --with-test --with-doc --with-dev --dry-run --switch=./sbom.tmp --json=solution.json --yes
-
-  The JSON file contains a 'solution' field that looks like this:
-
-  "solution": [
-    { "install": { "name": "ocaml-base-compiler", "version": "5.2.1" } },
-    { "install": { "name": "base-unix", "version": "base" } },
-    { "install": { "name": "base-threads", "version": "base" } },
-    { "install": { "name": "base-bigarray", "version": "base" } },
-    { "install": { "name": "ocaml-options-vanilla", "version": "1" } },
-    ...
-  ],
-*)
-
 (** Known contexts where a dependency applies. *)
-type context = {
+type scope = {
   install: bool;
   build: bool;
   dev: bool;
@@ -42,10 +23,16 @@ type context = {
   test: bool;
 }
 
-type t = {
+(** A component identifier, equivalent to a PURL *)
+type component = {
   kind: package_namespace;
   name: string;
   version: string;
-  context: context;
-  source: source;
+}
+
+(** A dependency: how component [src] depends on [dst] *)
+type t = {
+  src: component;
+  dst: component;
+  scope: scope;
 }

@@ -1,12 +1,13 @@
 <doc text="Add or replace certain properties in a generated SBOM">
 
+from purl import t
+
 from ocaml_sbom as s
 import
   actor,
   component_kind,
   dep_edge,
-  licensing,
-  purl
+  licensing
 
 (******************************************************************)
 (* Patching machinery *)
@@ -73,8 +74,8 @@ type document_overlay
     <doc text="Magic number and format version, e.g.
                {{\"ocaml-sbom-overlay/1.0\"}}">
     : string;
-  ~components : (s.purl, component) elt_patch list;
-  ~dep_edges : ((s.purl * s.purl), s.dep_edge) elt_patch list;
+  ~components : (purl.t, component) elt_patch list;
+  ~dep_edges : ((purl.t * purl.t), s.dep_edge) elt_patch list;
 }
 
 type component = {

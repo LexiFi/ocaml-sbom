@@ -11,10 +11,7 @@
     https://github.com/package-url/purl-spec/blob/main/types/opam-definition.json
 *)
 
-(** A valid opam purl e.g. [pkg:opam/fleeb@1.0.2] *)
-type t = private string
-
 (** Create an opam package purl from name and version.
     Fail with an error message if the name or the version is not opam-compliant.
 *)
-val create : name:string -> version:string -> (t, string) result
+val create : name:string -> version:string -> (Purl.t, string) result

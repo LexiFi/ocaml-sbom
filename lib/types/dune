@@ -24,3 +24,9 @@
 ; TODO: make this work
 ;  (action (chdir %{project_root} (run atdml %{deps})))
 )
+
+(rule
+  (targets purl.ml purl.mli)
+  (deps purl.atd)
+  (action (run atdml %{deps}))
+)

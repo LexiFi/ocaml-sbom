@@ -2,9 +2,11 @@
 
 type package_namespace = Opam
 
-type source = Lockfiles of string list
+type source =
+  | Lockfiles of Fpath.t list
+  | Dry_install of Fpath.t list
 
-type context = {
+type scope = {
   install: bool;
   build: bool;
   dev: bool;
@@ -12,10 +14,14 @@ type context = {
   test: bool;
 }
 
-type t = {
+type component = {
   kind: package_namespace;
   name: string;
   version: string;
-  context: context;
-  source: source;
+}
+
+type t = {
+  src: component;
+  dst: component;
+  scope: scope;
 }

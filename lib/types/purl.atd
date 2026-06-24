@@ -1,0 +1,12 @@
+type t
+  <doc text="
+    A PURL is the syntax for a package identifier across popular package
+    managers. It is the preferred component identifier in CycloneDX
+    and also in SPDX starting with SPDX 3.
+
+    Here, we expect an opam PURL as specified at
+    https://github.com/package-url/purl-spec/blob/main/types/opam-definition.json
+
+    An example is {{pkg:opam/ocaml-base-compiler@5.2.0}}.
+  ">
+  = string

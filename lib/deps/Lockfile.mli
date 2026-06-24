@@ -6,4 +6,4 @@ type t = {
   deps : Dep.t list;
 }
 
-val parse : string -> (t, string) result
+val parse : Fpath.t -> (t, string) result

@@ -3,6 +3,8 @@
 An SBOM component is an opam package.
 ">
 
+from purl import t
+
 type document
   <doc text="The top-level SBOM document">
   =
@@ -16,7 +18,7 @@ type document
 
   root_components
     <doc text="The collection of components this SBOM is about">
-    : purl list;
+    : purl.t list;
 
   components
     <doc text="All components including root components">
@@ -41,26 +43,13 @@ type component
   <doc text="An SBOM component">
   =
 {
-  key : purl;
+  key : purl.t;
   name : string;
   version : string;
   kind : component_kind;
   authors : actor list;
   licensing : licensing;
 }
-
-type purl
-  <doc text="
-    A PURL is the syntax for a package identifier across popular package
-    managers. It is the preferred component identifier in CycloneDX
-    and also in SPDX starting with SPDX 3.
-
-    Here, we expect an opam PURL as specified at
-    https://github.com/package-url/purl-spec/blob/main/types/opam-definition.json
-
-    An example is {{pkg:opam/ocaml-base-compiler@5.2.0}}.
-  ">
-  = string
 
 type component_kind = [
   | Opam_package of opam_package_kind option
@@ -78,10 +67,10 @@ type dep_edge = {
   src
    <doc text="Component key of the dependent (the package that requires
               the other)">
-   : purl;
+   : purl.t;
   dst
    <doc text="Component key of the dependency (the package being required)">
-   : purl;
+   : purl.t;
 
   scope : dep_scope;
 }

@@ -5,5 +5,7 @@
   (name sbom_deps)
   (libraries
     opam-file-format
+    fpath
+    sbom_types
   )
 )
