@@ -7,15 +7,14 @@ let common_format_version = "1.0"
 let ocaml_sbom_format = "ocaml-sbom/" ^ common_format_version
 let _overlay_format = "ocaml-sbom-overlay/" ^ common_format_version
 
-let make_scope (scope : Sbom_deps.Dep.scope) : S.dep_scope =
-  let { Sbom_deps.Dep.install = _; build; dev; doc; test } = scope in
-  match build, dev, doc, test with
-  | false, false, false, false -> S.Runtime  (* all_contexts: no restriction *)
-  | true,  false, false, false -> S.Build
-  | false, true,  false, false -> S.Dev
-  | false, false, true,  false -> S.Optional
-  | false, false, false, true  -> S.Test
-  | _ -> S.Runtime
+let make_scope (scopes : Sbom_deps.Dep.scopes) : S.dep_scope =
+  if scopes.install then Runtime
+  else if scopes.build then Build
+  else if scopes.doc || scopes.test then Optional
+  else if scopes.test then Test
+  else
+    (* empty scope - this shouldn't happen; fall back to the safest option *)
+    Runtime
 
 let unknown_licensing =
   S.create_licensing ~declared:S.Unknown ~concluded:S.Unknown ()
@@ -32,22 +31,23 @@ let make_component (x : Sbom_deps.Dep.component) =
     ~key:(make_purl x)
     ~name:x.name
     ~version:x.version
-    ~kind:(S.Opam_package None)
+    ~kind:(S.Opam_package Unknown)
     ~authors:[]
     ~licensing:unknown_licensing
     ()
 
-let generate_sbom ?output_file ?overlay_file ~project_root () =
+let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_root () =
   (* TODO: add overlay support *)
   ignore overlay_file;
-  let dep_src =
-    Sbom_deps.Resolve.get_dependency_resolution_source project_root in
-  let deps = Sbom_deps.Resolve.resolve dep_src in
+  let opamfiles =
+    Sbom_deps.Opam_resolve.find_opamfiles project_root in
+  let deps, warnings =
+    Sbom_deps.Opam_resolve.resolve_dependencies ?use_lockfiles ~opamfiles () in
   let root_components = List.map make_purl deps.root_components in
   let components = List.map make_component deps.components in
   let dep_edges =
     List.map (fun (dep : Sbom_deps.Dep.t) ->
-      let scope = make_scope dep.scope in
+      let scope = make_scope dep.scopes in
       S.create_dep_edge
         ~src:(make_purl dep.src)
         ~dst:(make_purl dep.dst)
@@ -74,5 +74,4 @@ let generate_sbom ?output_file ?overlay_file ~project_root () =
          fprintf oc "%s\n" json_str
        )
   );
-  let warnings = [] in
   warnings

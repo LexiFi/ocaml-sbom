@@ -1,0 +1,22 @@
+<doc text="JSON output of {{opam tree}}">
+
+type t = {
+  opam_version <json name="opam-version">: string;
+  command_line <json name="command-line">: string list;
+  switch: string;
+  tree: package list;
+}
+
+type package = {
+  name: string;
+  version: string;
+  ?satisfies
+    <doc text="something like {{\"(= 0.8.5 & with-doc)\"}}
+               or {{\"(= 2.1.1)\"}} for dependencies;
+               missing on root packages">
+    : string option;
+  ?is_duplicate
+    <doc text="missing on root packages">
+    : bool option;
+  dependencies: package list;
+}

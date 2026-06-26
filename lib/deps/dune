@@ -4,8 +4,16 @@
 (library
   (name sbom_deps)
   (libraries
-    opam-file-format
+    opam-format
     fpath
     sbom_types
+    sbom_util
+    str
   )
+)
+
+(rule
+  (targets opam_tree.ml opam_tree.mli)
+  (deps opam_tree.atd)
+  (action (run atdml %{deps}))
 )

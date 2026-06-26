@@ -32,3 +32,5 @@ val run :
   ?error_output:output ->
   ?name:string ->
   string list -> int
+
+val show : string list -> string

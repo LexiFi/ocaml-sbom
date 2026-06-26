@@ -12,11 +12,14 @@ let rec rm_recursive path =
   | _ ->
       Sys.remove path_str
 
-let with_temp_dir ?(prefix = "") ?(suffix = "") f =
+let with_temp_dir ?(persist = false) ?(prefix = "") ?(suffix = "") f =
   let path = Filename.temp_dir prefix suffix in
   Fun.protect
     (fun () -> f (Fpath.v path))
-    ~finally:(fun () -> rm_recursive (Fpath.v path))
+    ~finally:(fun () ->
+      if not persist then
+        rm_recursive (Fpath.v path)
+    )
 
 let with_temp_file ?(prefix = "") ?(suffix = ".tmp") func =
   let path, oc = Filename.open_temp_file prefix suffix in

@@ -52,7 +52,7 @@ type component
 }
 
 type component_kind = [
-  | Opam_package of opam_package_kind option
+  | Opam_package of opam_package_kind known
   (* Other possibilities: external command, C library, ... *)
 ] <json repr="object">
 

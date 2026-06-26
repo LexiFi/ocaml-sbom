@@ -12,7 +12,10 @@ bug-reports: "https://github.com/LexiFi/ocaml-sbom/issues"
 depends: [
   "dune" {>= "3.18"}
   "ocaml" {>= "4.14.0"}
+  "atdml" {build}
   "cmdliner"
+  "fpath"
+  "opam-format"
   "uuidm"
   "odoc" {with-doc}
 ]

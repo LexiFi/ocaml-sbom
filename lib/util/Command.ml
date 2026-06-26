@@ -4,6 +4,8 @@
     on the Unix library.
 *)
 
+open Printf
+
 type input =
   | Default
   | File of string
@@ -21,6 +23,9 @@ type pipe_task =
     (* write remaining bytes starting at offset *)
   | Read of Unix.file_descr * Buffer.t option
     (* read until EOF into buffer if one is provided *)
+
+let show argv =
+  sprintf "[%s]" (String.concat "; " (List.map (sprintf "%S") argv))
 
 let setup_cmd_input (inp : input) =
   match inp with

@@ -2,14 +2,9 @@
 
 type package_namespace = Opam
 
-type source =
-  | Lockfiles of Fpath.t list
-  | Dry_install of Fpath.t list
-
-type scope = {
-  install: bool;
+type scopes = {
   build: bool;
-  dev: bool;
+  install: bool;
   doc: bool;
   test: bool;
 }
@@ -23,5 +18,23 @@ type component = {
 type t = {
   src: component;
   dst: component;
-  scope: scope;
+  scopes: scopes;
 }
+
+let compare_component a b =
+  let c = String.compare a.name b.name in
+  if c <> 0 then c
+  else
+    let c = String.compare a.version b.version in
+    if c <> 0 then c
+    else
+      compare a b
+
+let compare_t a b =
+  let c = compare_component a.src b.src in
+  if c <> 0 then c
+  else
+    let c = compare_component a.dst b.dst in
+    if c <> 0 then c
+    else
+      compare a b

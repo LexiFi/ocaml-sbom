@@ -33,6 +33,7 @@ module Gen = struct
     project_root : Fpath.t; (* must exist *)
     output_file : Fpath.t option;
     overlay_file : Fpath.t option; (* must exist if provided *)
+    use_lockfiles : Sbom_deps.Opam_resolve.use_lockfiles;
   }
 
   let run (conf : conf) =
@@ -40,6 +41,7 @@ module Gen = struct
       Sbom_gen.Gen.generate_sbom
         ?output_file:conf.output_file
         ?overlay_file:conf.overlay_file
+        ~use_lockfiles:conf.use_lockfiles
         ~project_root:conf.project_root
         ()
     with
@@ -61,15 +63,47 @@ module Gen = struct
     in
     Arg.value (Arg.pos 0 Arg.file "." info)
 
+  let use_lockfiles_term =
+    let open Sbom_deps.Opam_resolve in
+    let conv =
+      Arg.conv
+        ~docv:"MODE"
+        ( (function
+            | "auto" -> Ok Use_lockfiles_if_available
+            | "require" -> Ok Require_lockfiles
+            | "ignore" -> Ok Ignore_lockfiles
+            | s -> Error (`Msg (sprintf
+                "unknown lockfile mode %S, \
+                 expected 'auto', 'require', or 'ignore'" s))),
+          (fun ppf v -> Format.pp_print_string ppf (match v with
+            | Use_lockfiles_if_available -> "auto"
+            | Require_lockfiles -> "require"
+            | Ignore_lockfiles -> "ignore")) )
+    in
+    let info =
+      Arg.info ["lockfiles"] ~docv:"MODE"
+        ~doc:"How to handle opam lockfiles. \
+              $(b,auto) (default): use lockfiles when available, \
+              fall back to opam files and emit a warning when some are missing. \
+              $(b,require): fail if any lockfile is missing. \
+              $(b,ignore): always use opam files, even when lockfiles exist."
+    in
+    Arg.value (Arg.opt conv Use_lockfiles_if_available info)
+
   let cmd_term =
-    let combine project_root output_file overlay_file =
+    let combine project_root output_file overlay_file use_lockfiles =
       run {
         project_root = Fpath.v project_root;
         output_file = Option.map Fpath.v output_file;
         overlay_file = Option.map Fpath.v overlay_file;
+        use_lockfiles;
       }
     in
-    Term.(const combine $ project_root_term $ output_file_term $ overlay_file_term)
+    Term.(const combine
+          $ project_root_term
+          $ output_file_term
+          $ overlay_file_term
+          $ use_lockfiles_term)
 
   let doc = "generate an SBOM for a Dune project"
 

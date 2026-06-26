@@ -7,20 +7,23 @@
 
 type package_namespace = Opam
 
-type source =
-  | Lockfiles of Fpath.t list
-    (** relative paths to lockfiles, one per Opam package declared by the
-        Dune project *)
-  | Dry_install of Fpath.t list
-    (** relative paths to opam files *)
+(** Known contexts where a dependency applies.
 
-(** Known contexts where a dependency applies. *)
-type scope = {
-  install: bool;
-  build: bool;
-  dev: bool;
-  doc: bool;
-  test: bool;
+    https://opam.ocaml.org/doc/1.2/Manual.html#opamfield-depends says:
+
+    - [build] dependencies are no longer needed at run-time:
+      they won't trigger recompilations of your package.
+    - [test] dependencies are only needed when building tests
+      (i.e. by instructions in the build-test field)
+    - likewise, [doc] dependencies are only required when building
+      the package documentation
+*)
+type scopes = {
+  build: bool;   (** defaults to true; disabled by [with-doc] or [with-test] *)
+  install: bool; (** defaults to true; disabled by [build], [with-doc],
+                     or [with-test] *)
+  doc: bool;     (** defaults to false; enabled by [with-doc] *)
+  test: bool;    (** defaults to false; enabled by [with-test] *)
 }
 
 (** A component identifier, equivalent to a PURL *)
@@ -34,5 +37,8 @@ type component = {
 type t = {
   src: component;
   dst: component;
-  scope: scope;
+  scopes: scopes;
 }
+
+val compare_component : component -> component -> int
+val compare_t : t -> t -> int
