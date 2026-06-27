@@ -15,5 +15,7 @@
    testo
    unix
    sbom_util
+   sbom_types
+   spdx_licenses
  )
 )

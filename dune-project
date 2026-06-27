@@ -1,6 +1,8 @@
 (lang dune 3.18)
 (name ocaml-sbom)
 
+(using menhir 3.0)
+
 (generate_opam_files)
 
 (license "ISC")
@@ -23,6 +25,7 @@ ocaml-sbom is an SBOM generator for OCaml projects with export to CycloneDX.
     cmdliner
     fpath
     opam-format
+    spdx_licenses
     uuidm
   )
   (maintenance_intent "(latest)")

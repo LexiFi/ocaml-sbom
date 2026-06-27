@@ -10,5 +10,6 @@
 
     sbom_deps
     sbom_types
+    spdx_licenses
   )
 )

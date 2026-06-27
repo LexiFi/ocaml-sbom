@@ -50,23 +50,41 @@ let actor_of_string s : S.actor =
   else
     S.Person (S.create_person ~name:s ())
 
-let license_expr_of_string s : S.license_expr =
-  (* opam license strings are free-form; treat each as an SPDX id *)
-  (* TODO: check against list of valid SPDX IDs and use the correct constructor
-     (Spdx_id or License_ref). Use the following two files:
-     - licenses.json
-     - exceptions.json
-     They should be downloaded from
-     https://github.com/spdx/license-list-data/tree/main/json
-     and converted to OCaml using a program or script that is easy to
-     rerun in the future. (alt: download them dynamically for each
-     invocation of ocaml-sbom)
+(* Convert from Spdx_licenses.t to our internal license_expr type.
+   The two type hierarchies are structurally similar but not identical:
+   - LicenseIDPlus folds the "+" into the id string
+   - LicenseRef/AdditionRef reconstruct the canonical "LicenseRef-" prefix
+   - exception id and AdditionRef are both represented as plain strings *)
 
-     Also, we need to parse this:
-     "LGPL-2.1-or-later WITH OCaml-LGPL-linking-exception"
-     into 'With (Atom ..., "OCaml-LGPL-linking-exception")'
-  *)
-  S.Atom (S.Spdx_id s)
+let spdx_simple (sl : Spdx_licenses.simple_license) : S.license_atom =
+  match sl with
+  | LicenseID id     -> S.Spdx_id id
+  | LicenseIDPlus id -> S.Spdx_id (id ^ "+")
+  | LicenseRef { document_ref = None; license_ref } ->
+      S.License_ref (S.create_license_ref ~id:("LicenseRef-" ^ license_ref) ())
+  | LicenseRef { document_ref = Some doc; license_ref } ->
+      S.License_ref (S.create_license_ref
+        ~id:("DocumentRef-" ^ doc ^ ":LicenseRef-" ^ license_ref) ())
+
+let spdx_addition (a : Spdx_licenses.addition) : string =
+  match a with
+  | Exception id -> id
+  | AdditionRef { document_ref = None; addition_ref } ->
+      "AdditionRef-" ^ addition_ref
+  | AdditionRef { document_ref = Some doc; addition_ref } ->
+      "DocumentRef-" ^ doc ^ ":AdditionRef-" ^ addition_ref
+
+let rec spdx_expr (expr : Spdx_licenses.t) : S.license_expr =
+  match expr with
+  | Simple sl    -> S.Atom (spdx_simple sl)
+  | WITH (sl, a) -> S.With (spdx_simple sl, spdx_addition a)
+  | AND  (a, b)  -> S.And (spdx_expr a, spdx_expr b)
+  | OR   (a, b)  -> S.Or  (spdx_expr a, spdx_expr b)
+
+let license_expr_of_string s : S.license_expr =
+  match Spdx_licenses.parse s with
+  | Ok expr  -> spdx_expr expr
+  | Error _  -> S.Atom (S.License_ref (S.create_license_ref ~id:s ()))
 
 let license_of_strings = function
   | [] -> S.Unknown

@@ -178,7 +178,8 @@ type license_atom
   =
 [
   | Spdx_id
-      <doc text="An SPDX license identifier, e.g. {{MIT}} or {{LGPL-2.1-only}}">
+      <doc text="An SPDX license identifier, optionally with a {{+}} suffix
+                 e.g. {{MIT}}, {{LGPL-2.1}} or {{LGPL-2.1+}}">
       of string
   | License_ref
       <doc text="A non-SPDX license">
