@@ -33,4 +33,17 @@ val run :
   ?name:string ->
   string list -> int
 
+type capture = {
+  status: int;
+  output: string;
+  error_output: string;
+}
+
+(** A specialized variant of {!run} that captures standard and error outputs
+    as strings. *)
+val run_capture :
+  ?input:input ->
+  ?name:string ->
+  string list -> capture
+
 val show : string list -> string

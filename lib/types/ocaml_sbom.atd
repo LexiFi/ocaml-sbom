@@ -48,7 +48,33 @@ type component
   version : string;
   kind : component_kind;
   authors : actor list;
+  maintainers: actor list;
   licensing : licensing;
+  tags: string list;
+  ?description <doc text="Opam's {{synopsis}} field">: string option;
+  ?homepage_url: string option;
+  ?doc_url: string option;
+  ?bug_reports_url: string option;
+  ?dev_repo_url: string option;
+  source_distribution: url_with_checksums;
+}
+
+type url_with_checksums = {
+  url: string;
+  checksums: checksum list;
+}
+
+type checksum_kind
+  <doc text="checksum kinds supported by Opam.
+             See https://opam.ocaml.org/doc/Manual.html#Checksums"> = [
+  | MD5
+  | SHA256
+  | SHA512
+]
+
+type checksum = {
+  kind: checksum_kind;
+  value <doc text="hexadecimal-encoded hash">: string;
 }
 
 type component_kind = [
@@ -130,7 +156,7 @@ type actor
 [
   | Person of person
   | Organization of organization
-]
+] <json repr="object">
 
 (***********************************************************************)
 (* Licensing *)
@@ -157,7 +183,7 @@ type license_atom
   | License_ref
       <doc text="A non-SPDX license">
       of license_ref
-]
+] <json repr="object">
 
 type license_expr
   <doc text="
@@ -177,7 +203,7 @@ type license_expr
   | With
       <doc text="SPDX WITH clause: license WITH exception-id">
       of (license_atom * string)
-]
+] <json repr="object">
 
 type licensing
   <doc text="

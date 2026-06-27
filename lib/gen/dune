@@ -4,6 +4,7 @@
   (libraries
     fpath
     opam-file-format
+    str
     uuidm
     yojson
 

@@ -16,8 +16,6 @@
    6. Read the JSON trees and convert them to our internal format.
 *)
 
-open Printf
-
 type dependencies = {
   root_components: Dep.component list;
   components: Dep.component list;
@@ -44,34 +42,6 @@ let find_opamfiles project_root =
       if Filename.check_suffix name ".opam" || name = "opam"
       then Some (project_root / name)
       else None)
-
-let quote str =
-  str
-  |> String.split_on_char '\n'
-  |> List.map (fun line -> "| " ^ line)
-  |> String.concat "\n"
-
-(* check exit status and quote stderr if command failed *)
-let check cmd status err_buf =
-  match status with
-  | 0 -> ()
-  | n ->
-      let msg =
-        sprintf "command failed with exit code %d: %s"
-          n (Sbom_util.Command.show cmd)
-      in
-      eprintf "Error:\n%s\n%s\n%!"
-        (quote (Buffer.contents err_buf)) msg;
-      failwith msg
-
-let run cmd =
-  let err = Buffer.create 10 in
-  let status =
-    Sbom_util.Command.run
-      ~output:Ignore
-      ~error_output:(Buffer err) cmd
-  in
-  check cmd status err
 
 let check_lockfiles opamfiles =
   opamfiles
@@ -137,13 +107,8 @@ let get_resolution_sources use_lockfiles all_files =
       in
       res, warnings
 
-let opam_of_file path =
-  OpamFilename.of_string path
-  |> OpamFile.make
-  |> OpamFile.OPAM.read
-
 let read_name_from_file path =
-  match  (opam_of_file !!path).name with
+  match (Opam_package.parse_file path).name with
   | None ->
       failwith ("cannot determine the name of root opam package: " ^ !!path)
   | Some name -> OpamPackage.Name.to_string name
@@ -248,6 +213,10 @@ let edges_of_dep_tree (x : Opam_tree.t) : Dep.t list =
 let make_abs_path path =
   Fpath.v (Sys.getcwd ()) // path
 
+let run argv =
+  let _ : string = Opam_command.run argv in
+  ()
+
 let resolve
     ~use_lockfiles
     ~opamfiles : string list * Dep.t list * Fpath.t list * string list =
@@ -264,7 +233,7 @@ let resolve
       else
         path
     in
-    run ["opam"; "switch"; "create"; !!empty_switch; "--empty"];
+    run ["opam"; "switch"; "create"; !!empty_switch; "--empty"] |> ignore;
     Fun.protect
       ~finally:(fun () ->
         run ["opam"; "switch"; "remove"; !!empty_switch; "--yes"]

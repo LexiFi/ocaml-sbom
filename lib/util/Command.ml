@@ -17,6 +17,12 @@ type output =
   | Buffer of Buffer.t
   | Ignore
 
+type capture = {
+  status: int;
+  output: string;
+  error_output: string;
+}
+
 (* A pipe task kept alive in the select loop *)
 type pipe_task =
   | Write of Unix.file_descr * bytes * int ref
@@ -129,3 +135,20 @@ let run
       | Unix.WEXITED code -> code
       | Unix.WSIGNALED n -> 128 + n
       | Unix.WSTOPPED n -> 128 + n
+
+let run_capture ?input ?name argv =
+  let out_buf = Buffer.create 256 in
+  let err_buf = Buffer.create 256 in
+  let status =
+    run
+      ?input
+      ~output:(Buffer out_buf)
+      ~error_output:(Buffer err_buf)
+      ?name
+      argv
+  in
+  {
+    status;
+    output = Buffer.contents out_buf;
+    error_output = Buffer.contents err_buf;
+  }
