@@ -142,11 +142,11 @@ let make_component (x : Sbom_deps.Dep.component) =
     ~source_distribution
     ()
 
-let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_root () =
+let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   (* TODO: add overlay support *)
   ignore overlay_file;
   let opamfiles =
-    Sbom_deps.Opam_resolve.find_opamfiles project_root in
+    List.concat_map Sbom_deps.Opam_resolve.find_opamfiles project_roots in
   let deps, warnings =
     Sbom_deps.Opam_resolve.resolve_dependencies ?use_lockfiles ~opamfiles () in
   let root_components = List.map make_purl deps.root_components in

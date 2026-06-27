@@ -30,7 +30,7 @@ let overlay_file_term : string option Term.t =
 
 module Gen = struct
   type conf = {
-    project_root : Fpath.t; (* must exist *)
+    project_roots : Fpath.t list; (* each must exist *)
     output_file : Fpath.t option;
     overlay_file : Fpath.t option; (* must exist if provided *)
     use_lockfiles : Sbom_deps.Opam_resolve.use_lockfiles;
@@ -42,7 +42,7 @@ module Gen = struct
         ?output_file:conf.output_file
         ?overlay_file:conf.overlay_file
         ~use_lockfiles:conf.use_lockfiles
-        ~project_root:conf.project_root
+        ~project_roots:conf.project_roots
         ()
     with
     | exception exn ->
@@ -54,14 +54,16 @@ module Gen = struct
         flush stderr;
         if warnings <> [] then exit 1
 
-  let project_root_term : string Term.t =
+  let project_roots_term : string list Term.t =
     let info =
       Arg.info [] ~docv:"PROJECT_ROOT"
         ~doc:
-          "Root directory of the Dune project to analyze. Defaults to the \
-           current directory."
+          "Root directory of a Dune project to analyze. \
+           May be repeated to analyze multiple projects at once \
+           (useful when local packages depend on each other). \
+           Defaults to the current directory."
     in
-    Arg.value (Arg.pos 0 Arg.file "." info)
+    Arg.value (Arg.pos_all Arg.file ["."] info)
 
   let use_lockfiles_term =
     let open Sbom_deps.Opam_resolve in
@@ -91,16 +93,16 @@ module Gen = struct
     Arg.value (Arg.opt conv Use_lockfiles_if_available info)
 
   let cmd_term =
-    let combine project_root output_file overlay_file use_lockfiles =
+    let combine project_roots output_file overlay_file use_lockfiles =
       run {
-        project_root = Fpath.v project_root;
+        project_roots = List.map Fpath.v project_roots;
         output_file = Option.map Fpath.v output_file;
         overlay_file = Option.map Fpath.v overlay_file;
         use_lockfiles;
       }
     in
     Term.(const combine
-          $ project_root_term
+          $ project_roots_term
           $ output_file_term
           $ overlay_file_term
           $ use_lockfiles_term)
@@ -111,11 +113,16 @@ module Gen = struct
     [
       `S Manpage.s_description;
       `P
-        "Analyze the Dune project rooted at $(b,PROJECT_ROOT) and write a \
+        "Analyze one or more Dune projects rooted at the given \
+         $(b,PROJECT_ROOT) directories and write a combined \
          Software Bill of Materials to $(b,--output) (or standard output). \
          The SBOM is written in $(mname)'s internal JSON format, which can \
          later be converted to a standard format with the $(b,export) \
          subcommand.";
+      `P
+        "Passing multiple roots is useful when local packages depend on each \
+         other: all roots are analyzed in a single opam resolution pass so \
+         cross-root dependencies are resolved correctly.";
       `P
         "The project's opam metadata and lock files are used to enumerate \
          direct and transitive dependencies. Run $(b,dune build) first to \
@@ -124,6 +131,7 @@ module Gen = struct
       `Pre "$(mname) gen";
       `Pre "$(mname) gen . -o my-project.sbom.json";
       `Pre "$(mname) gen /path/to/project -o sbom.json";
+      `Pre "$(mname) gen /path/to/a /path/to/b -o combined.sbom.json";
     ]
 
   let cmd =

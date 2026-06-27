@@ -43,6 +43,32 @@ let find_opamfiles project_root =
       then Some (project_root / name)
       else None)
 
+let read_name_from_file path =
+  match (Opam_package.parse_file path).name with
+  | None ->
+      failwith ("cannot determine the name of root opam package: " ^ !!path)
+  | Some name -> OpamPackage.Name.to_string name
+
+let get_name_of_opamfile path =
+  match Fpath.basename path with
+  | "opam"
+  | "opam.locked" ->
+      read_name_from_file path
+  | fname when Filename.check_suffix fname ".opam" ->
+      Filename.chop_suffix fname ".opam"
+  | fname when Filename.check_suffix fname ".opam.locked" ->
+      Filename.chop_suffix fname ".opam.locked"
+  | _ ->
+      (* unsupported opam file name *)
+      assert false
+
+(* Canonical destination name for an opam file in the temp dir.
+   Always "NAME.opam" regardless of whether the source is named "opam",
+   "NAME.opam", or a lockfile. This avoids collisions when two project
+   roots each contain a bare "opam" file with different package names. *)
+let canonical_dst_name opamfile =
+  get_name_of_opamfile opamfile ^ ".opam"
+
 let check_lockfiles opamfiles =
   opamfiles
   |> List.map (fun opamfile ->
@@ -81,9 +107,9 @@ let get_resolution_sources use_lockfiles all_files =
         all_files
         |> List.map (function
           | (opamfile, None) ->
-              (opamfile, Fpath.basename opamfile)
+              (opamfile, canonical_dst_name opamfile)
           | (opamfile, Some lockfile) ->
-              (lockfile, Fpath.basename opamfile)
+              (lockfile, canonical_dst_name opamfile)
         )
       in
       res, warnings
@@ -94,7 +120,7 @@ let get_resolution_sources use_lockfiles all_files =
           | (opamfile, None) ->
               failwith ("missing lockfile for opam file: " ^ !!opamfile)
           | (opamfile, Some lockfile) ->
-              lockfile, Fpath.basename opamfile
+              lockfile, canonical_dst_name opamfile
         )
       in
       res, warnings
@@ -102,29 +128,10 @@ let get_resolution_sources use_lockfiles all_files =
       let res =
         all_files
         |> List.map (fun (opamfile, _opt_lockfile) ->
-          opamfile, Fpath.basename opamfile
+          opamfile, canonical_dst_name opamfile
         )
       in
       res, warnings
-
-let read_name_from_file path =
-  match (Opam_package.parse_file path).name with
-  | None ->
-      failwith ("cannot determine the name of root opam package: " ^ !!path)
-  | Some name -> OpamPackage.Name.to_string name
-
-let get_name_of_opamfile path =
-  match Fpath.basename path with
-  | "opam"
-  | "opam.locked" ->
-      read_name_from_file path
-  | fname when Filename.check_suffix fname ".opam" ->
-      Filename.chop_suffix fname ".opam"
-  | fname when Filename.check_suffix fname ".opam.locked" ->
-      Filename.chop_suffix fname ".opam.locked"
-  | _ ->
-      (* unsupported opam file name *)
-      assert false
 
 let component_of_package (p : Opam_tree.package) : Dep.component =
   {
@@ -217,12 +224,25 @@ let run argv =
   let _ : string = Opam_command.run argv in
   ()
 
+let check_no_collisions resolution_sources =
+  let seen = Hashtbl.create 16 in
+  List.iter (fun (src, dst_name) ->
+    match Hashtbl.find_opt seen dst_name with
+    | Some prev_src ->
+        Printf.ksprintf failwith
+          "opam package name collision: %s and %s both resolve to package %s"
+          !!prev_src !!src (Filename.chop_suffix dst_name ".opam")
+    | None ->
+        Hashtbl.add seen dst_name src
+  ) resolution_sources
+
 let resolve
     ~use_lockfiles
     ~opamfiles : string list * Dep.t list * Fpath.t list * string list =
   let all_files = check_lockfiles opamfiles in
   let resolution_sources, warnings =
     get_resolution_sources use_lockfiles all_files in
+  check_no_collisions resolution_sources;
   let root_names, deps, sources =
     Sbom_util.File.with_temp_dir (* debug: use ~persist:true *)
     @@ fun temp_dir ->
@@ -249,13 +269,18 @@ let resolve
 
     let root_names =
        resolution_sources
-       |> List.map (fun (src, _dst_name) -> get_name_of_opamfile src)
+       |> List.map (fun (_src, dst_name) ->
+         Filename.chop_suffix dst_name ".opam")
+    in
+    let roots =
+      resolution_sources
+      |> List.map (fun (_src, dst_name) -> !!(temp_dir / dst_name))
     in
     let output_file = temp_dir / "tree.json" in
     run (["opam"; "tree";
           "--json"; !!output_file;
           "--switch"; !!empty_switch;
-          "--with-test"; "--with-dev-setup"; "--with-doc"] @ root_names);
+          "--with-test"; "--with-dev-setup"; "--with-doc"] @ roots);
     let dep_tree =
       Yojson.Safe.from_file !!output_file
       |> Opam_tree.T.of_yojson

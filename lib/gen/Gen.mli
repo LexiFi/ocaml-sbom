@@ -13,5 +13,5 @@ val generate_sbom :
   ?output_file:Fpath.t ->
   ?overlay_file:Fpath.t ->
   ?use_lockfiles:Sbom_deps.Opam_resolve.use_lockfiles ->
-  project_root:Fpath.t ->
+  project_roots:Fpath.t list ->
   unit -> string list
