@@ -220,8 +220,8 @@ let edges_of_dep_tree (x : Opam_tree.t) : Dep.t list =
 let make_abs_path path =
   Fpath.v (Sys.getcwd ()) // path
 
-let run argv =
-  let _ : string = Opam_command.run argv in
+let run ?show_output argv =
+  let _ : string = Opam_command.run ?show_output argv in
   ()
 
 let check_no_collisions resolution_sources =
@@ -236,27 +236,50 @@ let check_no_collisions resolution_sources =
         Hashtbl.add seen dst_name src
   ) resolution_sources
 
+let get_package_info_for_deps ~switch deps =
+  let packages : (Dep.component, OpamFile.OPAM.t) Hashtbl.t =
+    Hashtbl.create 100 in
+  let get_package_info component =
+    match Hashtbl.find_opt packages component with
+    | Some x -> x
+    | None ->
+        let info =
+          Opam_package.get
+            ~switch
+            ~name:component.name
+            ~version:component.version
+        in
+        Hashtbl.add packages component info;
+        info
+  in
+  deps
+  |> List.iter (fun (dep : Dep.t) ->
+    ignore (get_package_info dep.src);
+    ignore (get_package_info dep.dst)
+  );
+  packages
+
 let resolve
     ~use_lockfiles
-    ~opamfiles : string list * Dep.t list * Fpath.t list * string list =
+    ~opamfiles =
   let all_files = check_lockfiles opamfiles in
   let resolution_sources, warnings =
     get_resolution_sources use_lockfiles all_files in
   check_no_collisions resolution_sources;
-  let root_names, deps, sources =
+  let root_names, deps, sources, package_info =
     Sbom_util.File.with_temp_dir (* debug: use ~persist:true *)
     @@ fun temp_dir ->
     let empty_switch =
       let path = temp_dir / "empty-opam-switch" in
-      if Fpath.is_rel path then
+      !!(if Fpath.is_rel path then
         Fpath.v "." // path
       else
-        path
+        path)
     in
-    run ["opam"; "switch"; "create"; !!empty_switch; "--empty"] |> ignore;
+    run ["opam"; "switch"; "create"; empty_switch; "--empty"] |> ignore;
     Fun.protect
       ~finally:(fun () ->
-        run ["opam"; "switch"; "remove"; !!empty_switch; "--yes"]
+        run ["opam"; "switch"; "remove"; empty_switch; "--yes"]
       )
     @@ fun () ->
     resolution_sources
@@ -264,8 +287,9 @@ let resolve
       let dst = temp_dir / dst_name in
       Unix.symlink ~to_dir:false !!(make_abs_path src) !!dst
     );
-    run ["opam"; "pin"; "add"; !!temp_dir;
-         "--switch"; !!empty_switch; "--no-action"; "--yes"];
+    run ~show_output:true
+      ["opam"; "pin"; "add"; !!temp_dir;
+       "--switch"; empty_switch; "--no-action"; "--yes"];
 
     let root_names =
        resolution_sources
@@ -279,17 +303,18 @@ let resolve
     let output_file = temp_dir / "tree.json" in
     run (["opam"; "tree";
           "--json"; !!output_file;
-          "--switch"; !!empty_switch;
+          "--switch"; empty_switch;
           "--with-test"; "--with-dev-setup"; "--with-doc"] @ roots);
     let dep_tree =
       Yojson.Safe.from_file !!output_file
       |> Opam_tree.T.of_yojson
     in
     let deps = edges_of_dep_tree dep_tree in
+    let package_info = get_package_info_for_deps ~switch:empty_switch deps in
     let sources = List.map fst resolution_sources in
-    root_names, deps, sources
+    root_names, deps, sources, package_info
   in
-  root_names, deps, sources, warnings
+  root_names, deps, sources, package_info, warnings
 
 let merge_scopes (a : Dep.scopes) (b : Dep.scopes) : Dep.scopes =
   {
@@ -344,7 +369,7 @@ let deduplicate ~root_names source (edges : Dep.t list) : dependencies =
 let resolve_dependencies
     ?(use_lockfiles = Use_lockfiles_if_available)
     ~opamfiles ()
-  : dependencies * string list =
-  let root_names, edges, source, warnings =
+  : dependencies * (Dep.component, OpamFile.OPAM.t) Hashtbl.t * string list =
+  let root_names, edges, source, package_info, warnings =
     resolve ~use_lockfiles ~opamfiles in
-  deduplicate ~root_names source edges, warnings
+  deduplicate ~root_names source edges, package_info, warnings

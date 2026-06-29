@@ -33,6 +33,7 @@ type use_lockfiles =
 val find_opamfiles : Fpath.t -> Fpath.t list
 
 (** Resolve the dependencies by invoking [opam] on a temporary empty switch.
+    Returns the dependency graph and the details about each node (component).
 
     This command takes opam files (possibly coming from multiple project
     roots). Their base name must be [opam] or must
@@ -45,4 +46,5 @@ val find_opamfiles : Fpath.t -> Fpath.t list
 val resolve_dependencies :
   ?use_lockfiles:use_lockfiles ->
   opamfiles:Fpath.t list ->
-  unit -> dependencies * string list
+  unit ->
+  (dependencies * (Dep.component, OpamFile.OPAM.t) Hashtbl.t * string list)

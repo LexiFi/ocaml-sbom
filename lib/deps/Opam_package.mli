@@ -5,7 +5,7 @@
 
     Fail with an exception if anything goes wrong.
 *)
-val get : name:string -> version:string -> OpamFile.OPAM.t
+val get : switch:string -> name:string -> version:string -> OpamFile.OPAM.t
 
 (** Parse an opamfile or an opam lockfile *)
 val parse_file : Fpath.t -> OpamFile.OPAM.t

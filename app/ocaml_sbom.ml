@@ -24,6 +24,13 @@ let overlay_file_term : string option Term.t =
   in
   Arg.value (Arg.opt (Arg.some Arg.file) None info)
 
+let verbose_term : bool Term.t =
+  let info =
+    Arg.info [ "verbose"; "v" ]
+      ~doc:"Enable verbose output."
+  in
+  Arg.value (Arg.flag info)
+
 (****************************************************************************)
 (* 'gen' subcommand — generate an SBOM from a Dune project *)
 (****************************************************************************)
@@ -34,9 +41,11 @@ module Gen = struct
     output_file : Fpath.t option;
     overlay_file : Fpath.t option; (* must exist if provided *)
     use_lockfiles : Sbom_deps.Opam_resolve.use_lockfiles;
+    verbose : bool;
   }
 
   let run (conf : conf) =
+    Sbom_util.Global.verbose := conf.verbose;
     match
       Sbom_gen.Gen.generate_sbom
         ?output_file:conf.output_file
@@ -93,19 +102,21 @@ module Gen = struct
     Arg.value (Arg.opt conv Use_lockfiles_if_available info)
 
   let cmd_term =
-    let combine project_roots output_file overlay_file use_lockfiles =
+    let combine project_roots output_file overlay_file use_lockfiles verbose =
       run {
         project_roots = List.map Fpath.v project_roots;
         output_file = Option.map Fpath.v output_file;
         overlay_file = Option.map Fpath.v overlay_file;
         use_lockfiles;
+        verbose;
       }
     in
     Term.(const combine
           $ project_roots_term
           $ output_file_term
           $ overlay_file_term
-          $ use_lockfiles_term)
+          $ use_lockfiles_term
+          $ verbose_term)
 
   let doc = "generate an SBOM for a Dune project"
 
@@ -150,6 +161,7 @@ module Export = struct
     input : string;
     output : string option;
     format : output_format;
+    verbose : bool;
   }
 
   let format_conv =
@@ -163,6 +175,7 @@ module Export = struct
     Arg.conv ~docv:"FORMAT" (parse, print)
 
   let run (conf : conf) =
+    Sbom_util.Global.verbose := conf.verbose;
     let oc =
       match conf.output with
       | None -> stdout
@@ -199,8 +212,8 @@ module Export = struct
     Arg.value (Arg.opt format_conv CycloneDX info)
 
   let cmd_term =
-    let combine input output format = run { input; output; format } in
-    Term.(const combine $ input_term $ output_file_term $ format_term)
+    let combine input output format verbose = run { input; output; format; verbose } in
+    Term.(const combine $ input_term $ output_file_term $ format_term $ verbose_term)
 
   let doc = "export an SBOM to a standard format"
 

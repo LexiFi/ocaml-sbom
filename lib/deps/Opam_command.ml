@@ -21,7 +21,11 @@ let check cmd (capture : Sbom_util.Command.capture) =
         (quote capture.error_output) msg;
       failwith msg
 
-let run cmd =
+let run ?(show_output = false) cmd =
+  if !Sbom_util.Global.verbose then
+    eprintf "CMD %s\n%!" (String.concat " " cmd);
   let capture = Sbom_util.Command.run_capture cmd in
   check cmd capture;
+  if !Sbom_util.Global.verbose && show_output then
+    eprintf "Output:\n%s\n%!" (quote capture.output);
   capture.output

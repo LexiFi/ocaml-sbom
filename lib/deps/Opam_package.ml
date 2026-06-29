@@ -9,7 +9,11 @@ let parse_file path =
   |> OpamFile.make
   |> OpamFile.OPAM.read
 
-let get ~name ~version =
+let get ~switch ~name ~version =
   let full_name = sprintf "%s.%s" name version in
-  let out = Opam_command.run ["opam"; "show"; full_name; "--raw"] in
+  let out = Opam_command.run [
+    "opam"; "show"; full_name;
+    "--switch"; switch;
+    "--raw"
+  ] in
   OpamFile.OPAM.read_from_string out

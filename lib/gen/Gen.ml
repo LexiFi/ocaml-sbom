@@ -98,8 +98,14 @@ let license_of_strings = function
       in
       S.Known expr
 
-let make_component (x : Sbom_deps.Dep.component) =
-  let o = Sbom_deps.Opam_package.get ~name:x.name ~version:x.version in
+let make_component
+    (package_info : (Sbom_deps.Dep.component, OpamFile.OPAM.t) Hashtbl.t)
+    (x : Sbom_deps.Dep.component) =
+  let o =
+    match Hashtbl.find_opt package_info x with
+    | None -> assert false
+    | Some x -> x
+  in
   let maintainers = List.map actor_of_string (OpamFile.OPAM.maintainer o) in
   let authors = List.map actor_of_string (OpamFile.OPAM.author o) in
   let licensing =
@@ -147,10 +153,10 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   ignore overlay_file;
   let opamfiles =
     List.concat_map Sbom_deps.Opam_resolve.find_opamfiles project_roots in
-  let deps, warnings =
+  let deps, package_info, warnings =
     Sbom_deps.Opam_resolve.resolve_dependencies ?use_lockfiles ~opamfiles () in
   let root_components = List.map make_purl deps.root_components in
-  let components = List.map make_component deps.components in
+  let components = List.map (make_component package_info) deps.components in
   let dep_edges =
     List.map (fun (dep : Sbom_deps.Dep.t) ->
       let scope = make_scope dep.scopes in

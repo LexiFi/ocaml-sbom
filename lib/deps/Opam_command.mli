@@ -4,5 +4,7 @@
 
     Fail with an error message showing the command's error output if
     the exit status is nonzero.
+
+    @param show_output is for debugging
 *)
-val run : string list -> string
+val run : ?show_output:bool -> string list -> string
