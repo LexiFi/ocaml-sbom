@@ -3,9 +3,11 @@
   (public_name ocaml-sbom)
   (name ocaml_sbom)
   (libraries
+    cdx
     cmdliner
     fpath
-
     sbom_gen
+    sbom_types
+    yojson
   )
 )

@@ -158,7 +158,7 @@ module Export = struct
   type output_format = CycloneDX (* | SPDX *)
 
   type conf = {
-    input : string;
+    input : string option; (* None = read from stdin *)
     output : string option;
     format : output_format;
     verbose : bool;
@@ -176,31 +176,37 @@ module Export = struct
 
   let run (conf : conf) =
     Sbom_util.Global.verbose := conf.verbose;
+    let json_str =
+      match conf.input with
+      | None -> In_channel.input_all stdin
+      | Some path -> In_channel.with_open_text path In_channel.input_all
+    in
+    let document = Sbom_types.Ocaml_sbom.Document.of_json json_str in
+    let output_str =
+      match conf.format with
+      | CycloneDX ->
+          Cdx.Cdx_export.of_document document
+          |> Cdx.CycloneDX_1_6.yojson_of_cycloneDXBillofMaterialsStandard
+          |> Yojson.Safe.pretty_to_string
+    in
     let oc =
       match conf.output with
       | None -> stdout
       | Some path -> open_out path
     in
-    (* TODO: deserialize conf.input as a [Sbom.document] and call the
-       appropriate exporter (e.g. Cdx.of_document). *)
-    let format_name =
-      match conf.format with
-      | CycloneDX -> "cyclonedx"
-    in
-    fprintf oc
-      "{ \"_note\": \"export not yet implemented\", \"input\": %S, \
-       \"format\": %S }\n"
-      conf.input format_name;
+    fprintf oc "%s\n" output_str;
     if conf.output <> None then close_out oc
 
-  let input_term : string Term.t =
+  let input_term : string option Term.t =
     let info =
       Arg.info [] ~docv:"INPUT"
         ~doc:
           "Path to an SBOM file in $(mname)'s internal format, as produced by \
-           $(b,ocaml-sbom gen)."
+           $(b,ocaml-sbom gen). Reads from standard input when omitted, \
+           enabling piped workflows such as \
+           $(b,ocaml-sbom gen | ocaml-sbom export)."
     in
-    Arg.required (Arg.pos 0 (Arg.some Arg.string) None info)
+    Arg.value (Arg.pos 0 (Arg.some Arg.string) None info)
 
   let format_term : output_format Term.t =
     let info =
