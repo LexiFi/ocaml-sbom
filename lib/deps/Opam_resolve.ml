@@ -39,8 +39,13 @@ let find_opamfiles project_root =
   Sys.readdir !!project_root
   |> Array.to_list
   |> List.filter_map (fun name ->
-      if Filename.check_suffix name ".opam" || name = "opam"
-      then Some (project_root / name)
+      if Filename.check_suffix name ".opam" || name = "opam" then
+        let path = project_root / name in
+        if Sys.is_regular_file !!path  then
+          (* works also with symlinks to regular files *)
+          Some path
+        else
+          None
       else None)
 
 let read_name_from_file path =
