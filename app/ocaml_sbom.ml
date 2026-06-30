@@ -10,8 +10,7 @@ open Cmdliner
 let output_file_term : string option Term.t =
   let info =
     Arg.info [ "o"; "output" ] ~docv:"FILE"
-      ~doc:
-        "Write output to $(docv). Defaults to standard output when omitted."
+      ~doc:"Write output to $(docv). Defaults to standard output when omitted."
   in
   Arg.value (Arg.opt (Arg.some Arg.string) None info)
 
@@ -19,16 +18,13 @@ let overlay_file_term : string option Term.t =
   let info =
     Arg.info [ "overlay" ] ~docv:"FILE"
       ~doc:
-        "Use $(docv) to amend the generated SBOM. \
-         See online documentation for syntax and examples."
+        "Use $(docv) to amend the generated SBOM. See online documentation for \
+         syntax and examples."
   in
   Arg.value (Arg.opt (Arg.some Arg.file) None info)
 
 let verbose_term : bool Term.t =
-  let info =
-    Arg.info [ "verbose"; "v" ]
-      ~doc:"Enable verbose output."
-  in
+  let info = Arg.info [ "verbose"; "v" ] ~doc:"Enable verbose output." in
   Arg.value (Arg.flag info)
 
 (****************************************************************************)
@@ -47,12 +43,9 @@ module Gen = struct
   let run (conf : conf) =
     Sbom_util.Global.verbose := conf.verbose;
     match
-      Sbom_gen.Gen.generate_sbom
-        ?output_file:conf.output_file
-        ?overlay_file:conf.overlay_file
-        ~use_lockfiles:conf.use_lockfiles
-        ~project_roots:conf.project_roots
-        ()
+      Sbom_gen.Gen.generate_sbom ?output_file:conf.output_file
+        ?overlay_file:conf.overlay_file ~use_lockfiles:conf.use_lockfiles
+        ~project_roots:conf.project_roots ()
     with
     | exception exn ->
         eprintf "Error: %s\n" (Printexc.to_string exn);
@@ -67,56 +60,58 @@ module Gen = struct
     let info =
       Arg.info [] ~docv:"PROJECT_ROOT"
         ~doc:
-          "Root directory of a Dune project to analyze. \
-           May be repeated to analyze multiple projects at once \
-           (useful when local packages depend on each other). \
-           Defaults to the current directory."
+          "Root directory of a Dune project to analyze. May be repeated to \
+           analyze multiple projects at once (useful when local packages \
+           depend on each other). Defaults to the current directory."
     in
-    Arg.value (Arg.pos_all Arg.file ["."] info)
+    Arg.value (Arg.pos_all Arg.file [ "." ] info)
 
   let use_lockfiles_term =
     let open Sbom_deps.Opam_resolve in
     let conv =
-      Arg.conv
-        ~docv:"MODE"
+      Arg.conv ~docv:"MODE"
         ( (function
-            | "auto" -> Ok Use_lockfiles_if_available
-            | "require" -> Ok Require_lockfiles
-            | "ignore" -> Ok Ignore_lockfiles
-            | s -> Error (`Msg (sprintf
-                "unknown lockfile mode %S, \
-                 expected 'auto', 'require', or 'ignore'" s))),
-          (fun ppf v -> Format.pp_print_string ppf (match v with
-            | Use_lockfiles_if_available -> "auto"
-            | Require_lockfiles -> "require"
-            | Ignore_lockfiles -> "ignore")) )
+          | "auto" -> Ok Use_lockfiles_if_available
+          | "require" -> Ok Require_lockfiles
+          | "ignore" -> Ok Ignore_lockfiles
+          | s ->
+              Error
+                (`Msg
+                   (sprintf
+                      "unknown lockfile mode %S, expected 'auto', 'require', \
+                       or 'ignore'"
+                      s))),
+          fun ppf v ->
+            Format.pp_print_string ppf
+              (match v with
+              | Use_lockfiles_if_available -> "auto"
+              | Require_lockfiles -> "require"
+              | Ignore_lockfiles -> "ignore") )
     in
     let info =
-      Arg.info ["lockfiles"] ~docv:"MODE"
-        ~doc:"How to handle opam lockfiles. \
-              $(b,auto) (default): use lockfiles when available, \
-              fall back to opam files and emit a warning when some are missing. \
-              $(b,require): fail if any lockfile is missing. \
-              $(b,ignore): always use opam files, even when lockfiles exist."
+      Arg.info [ "lockfiles" ] ~docv:"MODE"
+        ~doc:
+          "How to handle opam lockfiles. $(b,auto) (default): use lockfiles \
+           when available, fall back to opam files and emit a warning when \
+           some are missing. $(b,require): fail if any lockfile is missing. \
+           $(b,ignore): always use opam files, even when lockfiles exist."
     in
     Arg.value (Arg.opt conv Use_lockfiles_if_available info)
 
   let cmd_term =
     let combine project_roots output_file overlay_file use_lockfiles verbose =
-      run {
-        project_roots = List.map Fpath.v project_roots;
-        output_file = Option.map Fpath.v output_file;
-        overlay_file = Option.map Fpath.v overlay_file;
-        use_lockfiles;
-        verbose;
-      }
+      run
+        {
+          project_roots = List.map Fpath.v project_roots;
+          output_file = Option.map Fpath.v output_file;
+          overlay_file = Option.map Fpath.v overlay_file;
+          use_lockfiles;
+          verbose;
+        }
     in
-    Term.(const combine
-          $ project_roots_term
-          $ output_file_term
-          $ overlay_file_term
-          $ use_lockfiles_term
-          $ verbose_term)
+    Term.(
+      const combine $ project_roots_term $ output_file_term $ overlay_file_term
+      $ use_lockfiles_term $ verbose_term)
 
   let doc = "generate an SBOM for a Dune project"
 
@@ -125,11 +120,10 @@ module Gen = struct
       `S Manpage.s_description;
       `P
         "Analyze one or more Dune projects rooted at the given \
-         $(b,PROJECT_ROOT) directories and write a combined \
-         Software Bill of Materials to $(b,--output) (or standard output). \
-         The SBOM is written in $(mname)'s internal JSON format, which can \
-         later be converted to a standard format with the $(b,export) \
-         subcommand.";
+         $(b,PROJECT_ROOT) directories and write a combined Software Bill of \
+         Materials to $(b,--output) (or standard output). The SBOM is written \
+         in $(mname)'s internal JSON format, which can later be converted to a \
+         standard format with the $(b,export) subcommand.";
       `P
         "Passing multiple roots is useful when local packages depend on each \
          other: all roots are analyzed in a single opam resolution pass so \
@@ -203,8 +197,8 @@ module Export = struct
         ~doc:
           "Path to an SBOM file in $(mname)'s internal format, as produced by \
            $(b,ocaml-sbom gen). Reads from standard input when omitted, \
-           enabling piped workflows such as \
-           $(b,ocaml-sbom gen | ocaml-sbom export)."
+           enabling piped workflows such as $(b,ocaml-sbom gen | ocaml-sbom \
+           export)."
     in
     Arg.value (Arg.pos 0 (Arg.some Arg.string) None info)
 
@@ -212,14 +206,17 @@ module Export = struct
     let info =
       Arg.info [ "format" ] ~docv:"FORMAT"
         ~doc:
-          "Output format. Currently the only supported value is \
-           $(b,cyclonedx) (default)."
+          "Output format. Currently the only supported value is $(b,cyclonedx) \
+           (default)."
     in
     Arg.value (Arg.opt format_conv CycloneDX info)
 
   let cmd_term =
-    let combine input output format verbose = run { input; output; format; verbose } in
-    Term.(const combine $ input_term $ output_file_term $ format_term $ verbose_term)
+    let combine input output format verbose =
+      run { input; output; format; verbose }
+    in
+    Term.(
+      const combine $ input_term $ output_file_term $ format_term $ verbose_term)
 
   let doc = "export an SBOM to a standard format"
 

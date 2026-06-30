@@ -30,17 +30,27 @@ open Printf
    Source: https://github.com/ocaml/opam/blob/65fa20ed7d17aa13482d60962924ff61888b87de/src/format/opamPackage.ml#L67-L81
 *)
 let valid_name name =
-  name <> "" &&
-  String.for_all (fun c ->
-    match c with
-    | 'a'..'z' | 'A'..'Z' | '0'..'9' | '-' | '_' | '+' -> true
-    | _ -> false
-  ) name &&
-  String.exists (fun c ->
-    match c with
-    | 'a'..'z' | 'A'..'Z' -> true
-    | _ -> false
-  ) name
+  name <> ""
+  && String.for_all
+       (fun c ->
+         match c with
+         | 'a' .. 'z'
+         | 'A' .. 'Z'
+         | '0' .. '9'
+         | '-'
+         | '_'
+         | '+' ->
+             true
+         | _ -> false)
+       name
+  && String.exists
+       (fun c ->
+         match c with
+         | 'a' .. 'z'
+         | 'A' .. 'Z' ->
+             true
+         | _ -> false)
+       name
 
 (* opam version constraints, from src/format/opamPackage.ml in the opam source:
    - allowed characters: letters (a-z, A-Z), digits (0-9), '-', '_', '+', '.', '~'
@@ -49,12 +59,21 @@ let valid_name name =
    Source: https://github.com/ocaml/opam/blob/65fa20ed7d17aa13482d60962924ff61888b87de/src/format/opamPackage.ml#L23-L32
  *)
 let valid_version version =
-  version <> "" &&
-  String.for_all (fun c ->
-    match c with
-    | 'a'..'z' | 'A'..'Z' | '0'..'9' | '-' | '_' | '+' | '.' | '~' -> true
-    | _ -> false
-  ) version
+  version <> ""
+  && String.for_all
+       (fun c ->
+         match c with
+         | 'a' .. 'z'
+         | 'A' .. 'Z'
+         | '0' .. '9'
+         | '-'
+         | '_'
+         | '+'
+         | '.'
+         | '~' ->
+             true
+         | _ -> false)
+       version
 
 let create ~name ~version =
   if not (valid_name name) then

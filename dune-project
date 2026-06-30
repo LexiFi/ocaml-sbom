@@ -24,6 +24,7 @@ ocaml-sbom is an SBOM generator for OCaml projects with export to CycloneDX.
     (atdml :build)
     cmdliner
     fpath
+    (ocamlformat (and (>= 0.28.0) (< 0.29.0) :dev))
     opam-format
     spdx_licenses
     uuidm

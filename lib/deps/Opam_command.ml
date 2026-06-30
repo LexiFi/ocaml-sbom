@@ -3,8 +3,7 @@
 open Printf
 
 let quote str =
-  str
-  |> String.split_on_char '\n'
+  str |> String.split_on_char '\n'
   |> List.map (fun line -> "| " ^ line)
   |> String.concat "\n"
 
@@ -14,16 +13,14 @@ let check cmd (capture : Sbom_util.Command.capture) =
   | 0 -> ()
   | n ->
       let msg =
-        sprintf "command failed with exit code %d: %s"
-          n (Sbom_util.Command.show cmd)
+        sprintf "command failed with exit code %d: %s" n
+          (Sbom_util.Command.show cmd)
       in
-      eprintf "Error:\n%s\n%s\n%!"
-        (quote capture.error_output) msg;
+      eprintf "Error:\n%s\n%s\n%!" (quote capture.error_output) msg;
       failwith msg
 
 let run ?(show_output = false) cmd =
-  if !Sbom_util.Global.verbose then
-    eprintf "CMD %s\n%!" (String.concat " " cmd);
+  if !Sbom_util.Global.verbose then eprintf "CMD %s\n%!" (String.concat " " cmd);
   let capture = Sbom_util.Command.run_capture cmd in
   check cmd capture;
   if !Sbom_util.Global.verbose && show_output then
