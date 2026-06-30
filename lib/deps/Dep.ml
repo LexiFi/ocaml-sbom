@@ -1,7 +1,15 @@
 (* see mli *)
 
 type package_namespace = Opam
-type scopes = { build : bool; install : bool; doc : bool; test : bool }
+
+type scopes = {
+  build : bool;
+  install : bool;
+  doc : bool;
+  test : bool;
+  dev : bool;
+}
+
 type component = { kind : package_namespace; name : string; version : string }
 type t = { src : component; dst : component; scopes : scopes }
 

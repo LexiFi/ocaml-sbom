@@ -9,8 +9,9 @@ let _overlay_format = "ocaml-sbom-overlay/" ^ common_format_version
 let make_scope (scopes : Sbom_deps.Dep.scopes) : S.dep_scope =
   if scopes.install then Runtime
   else if scopes.build then Build
-  else if scopes.doc || scopes.test then Optional
   else if scopes.test then Test
+  else if scopes.doc then Optional
+  else if scopes.dev then Dev
   else
     (* empty scope - this shouldn't happen; fall back to the safest option *)
     Runtime

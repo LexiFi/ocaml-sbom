@@ -156,6 +156,7 @@ let contains ~word =
 let contains_build = contains ~word:"build"
 let contains_with_doc = contains ~word:"with-doc"
 let contains_with_test = contains ~word:"with-test"
+let contains_with_dev_setup = contains ~word:"with-dev-setup"
 
 let scopes_of_constraint constraints_string : Dep.scopes =
   (* Assume that if multiple filters are found, they're ORed and not negated.
@@ -168,16 +169,18 @@ let scopes_of_constraint constraints_string : Dep.scopes =
   let build_only = contains_build constraints_string in
   let doc_only = contains_with_doc constraints_string in
   let test_only = contains_with_test constraints_string in
+  let dev_only = contains_with_dev_setup constraints_string in
   {
-    build = not (doc_only || test_only);
-    install = not (build_only || doc_only || test_only);
+    build = not (doc_only || test_only || dev_only);
+    install = not (build_only || doc_only || test_only || dev_only);
     doc = doc_only;
     test = test_only;
+    dev = dev_only;
   }
 
 (* = scopes_of_constraint "" *)
 let default_scopes : Dep.scopes =
-  { build = true; install = true; doc = false; test = false }
+  { build = true; install = true; doc = false; test = false; dev = false }
 
 let edge_of_opam_dep (src : Dep.component) (dst_pkg : Opam_tree.package) : Dep.t
     =
@@ -317,6 +320,7 @@ let merge_scopes (a : Dep.scopes) (b : Dep.scopes) : Dep.scopes =
     build = a.build || b.build;
     doc = a.doc || b.doc;
     test = a.test || b.test;
+    dev = a.dev || b.dev;
   }
 
 (* Handle duplicates, derive lists of nodes from the edges *)

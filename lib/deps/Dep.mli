@@ -7,11 +7,15 @@
 type package_namespace = Opam
 
 type scopes = {
-  build : bool;  (** defaults to true; disabled by [with-doc] or [with-test] *)
+  build : bool;
+      (** defaults to true; disabled by [with-doc], [with-test], or
+          [with-dev-setup] *)
   install : bool;
-      (** defaults to true; disabled by [build], [with-doc], or [with-test] *)
+      (** defaults to true; disabled by [build], [with-doc], [with-test], or
+          [with-dev-setup] *)
   doc : bool;  (** defaults to false; enabled by [with-doc] *)
   test : bool;  (** defaults to false; enabled by [with-test] *)
+  dev : bool;  (** defaults to false; enabled by [with-dev-setup] *)
 }
 (** Known contexts where a dependency applies.
 
@@ -22,7 +26,9 @@ type scopes = {
     - [test] dependencies are only needed when building tests (i.e. by
       instructions in the build-test field)
     - likewise, [doc] dependencies are only required when building the package
-      documentation *)
+      documentation
+    - [with-dev-setup] dependencies are development tools (formatters, linters,
+      etc.) not needed to build or install the package *)
 
 type component = { kind : package_namespace; name : string; version : string }
 (** A component identifier, equivalent to a PURL *)
