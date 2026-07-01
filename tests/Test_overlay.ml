@@ -1,14 +1,13 @@
-(* Quick overlay functional test *)
+(* Overlay tests *)
 
-let doc_json =
-  {|{
-  "format": "ocaml-sbom/1.0",
-  "namespace": "12345678-1234-1234-1234-123456789abc",
-  "root_components": [ "pkg:opam/myproject@1.0.0" ],
-  "components": [
-    {
-      "key": "pkg:opam/myproject@1.0.0",
-      "name": "myproject",
+open Printf
+module S = Sbom_types.Ocaml_sbom
+
+let component_json key name =
+  sprintf
+    {|{
+      "key": "%s",
+      "name": "%s",
       "version": "1.0.0",
       "kind": { "Opam_package": "Unknown" },
       "authors": [],
@@ -16,30 +15,17 @@ let doc_json =
       "licensing": { "declared": "Unknown", "concluded": "Unknown" },
       "tags": [],
       "source_distribution": { "url": "", "checksums": [] }
-    },
-    {
-      "key": "pkg:opam/depA@2.0.0",
-      "name": "depA",
-      "version": "2.0.0",
-      "kind": { "Opam_package": "Unknown" },
-      "authors": [],
-      "maintainers": [],
-      "licensing": { "declared": "Unknown", "concluded": "Unknown" },
-      "tags": [],
-      "source_distribution": { "url": "", "checksums": [] }
-    },
-    {
-      "key": "pkg:opam/depB@2.0.0",
-      "name": "depB",
-      "version": "2.0.0",
-      "kind": { "Opam_package": "Unknown" },
-      "authors": [],
-      "maintainers": [],
-      "licensing": { "declared": "Unknown", "concluded": "Unknown" },
-      "tags": [],
-      "source_distribution": { "url": "", "checksums": [] }
-    }
-  ],
+    }|}
+    key name
+
+(* myproject (root) -> depA -> depB *)
+let doc_json =
+  sprintf
+    {|{
+  "format": "ocaml-sbom/1.0",
+  "namespace": "12345678-1234-1234-1234-123456789abc",
+  "root_components": [ "pkg:opam/myproject@1.0.0" ],
+  "components": [ %s, %s, %s ],
   "dep_edges": [
     {
       "src": "pkg:opam/myproject@1.0.0",
@@ -50,13 +36,30 @@ let doc_json =
       "src": "pkg:opam/depA@2.0.0",
       "dst": "pkg:opam/depB@2.0.0",
       "scope": "Runtime"
-    }
+     }
   ]
-}
-|}
+}|}
+    (component_json "pkg:opam/myproject@1.0.0" "myproject")
+    (component_json "pkg:opam/depA@2.0.0" "depA")
+    (component_json "pkg:opam/depB@2.0.0" "depB")
 
-let overlay_json =
-  {|{
+let parse ?overlay doc =
+  let doc = S.Document.of_json doc in
+  match overlay with
+  | None -> doc
+  | Some overlay ->
+      let overlay =
+        Sbom_types.Ocaml_sbom_overlay.Document_overlay.of_json overlay
+      in
+      Sbom_gen.Overlay.apply doc overlay
+
+(* Removing depA should cascade: depB loses its only dependent and is also
+   removed, leaving only the root component. The license patch on myproject
+   is also checked. *)
+let test_remove_component =
+  Testo.create "remove component and orphan dependencies" (fun () ->
+      let overlay_json =
+        {|{
   "format": "ocaml-sbom-overlay/1.0",
   "actions": [
     {
@@ -65,23 +68,47 @@ let overlay_json =
         "spdx_license": "MIT OR Apache-2.0"
       }
     },
-    { "Remove_component": { "name": "depA", "recursive": false } }
+    { "Remove_component": { "name": "depA" } }
   ]
-}
-|}
-
-let test_overlay =
-  Testo.create "overlay" (fun () ->
-      let doc = Sbom_types.Ocaml_sbom.Document.of_json doc_json in
-      let overlay =
-        Sbom_types.Ocaml_sbom_overlay.Document_overlay.of_json overlay_json
+}|}
       in
-      let patched = Sbom_gen.Overlay.apply doc overlay in
-      assert (List.length patched.Sbom_types.Ocaml_sbom.components = 2);
-      assert (List.length patched.Sbom_types.Ocaml_sbom.dep_edges = 0);
-      let myproject = List.hd patched.Sbom_types.Ocaml_sbom.components in
-      match myproject.Sbom_types.Ocaml_sbom.licensing.declared with
-      | Sbom_types.Ocaml_sbom.Known _ -> ()
-      | _ -> failwith "expected Known license after Set_properties")
+      let patched = parse doc_json ~overlay:overlay_json in
+      Testo.(check int) ~msg:"components" 1 (List.length patched.S.components);
+      Testo.(check int) ~msg:"edges" 0 (List.length patched.S.dep_edges);
+      Testo.(check int)
+        ~msg:"root components" 1
+        (List.length patched.S.root_components);
+      let myproject = List.hd patched.S.components in
+      match myproject.S.licensing.declared with
+      | S.Known _ -> ()
+      | _ -> Testo.fail "expected Known license after Set_component_properties")
 
-let tests = [ test_overlay ]
+(* Adding a component via Add_component should register it as a root
+   component in addition to placing it in the component list. *)
+let test_add_component =
+  Testo.create "add component becomes root" (fun () ->
+      let overlay_json =
+        sprintf
+          {|{
+  "format": "ocaml-sbom-overlay/1.0",
+  "actions": [
+    { "Add_component": %s }
+  ]
+}|}
+          (component_json "pkg:opam/extra@3.0.0" "extra")
+      in
+      let patched = parse doc_json ~overlay:overlay_json in
+      Testo.(check int) ~msg:"components" 4 (List.length patched.S.components);
+      Testo.(check int)
+        ~msg:"root components" 2
+        (List.length patched.S.root_components);
+      let root_keys =
+        List.map
+          (fun (p : Sbom_types.Purl.t) -> (p :> string))
+          patched.S.root_components
+      in
+      if not (List.mem "pkg:opam/extra@3.0.0" root_keys) then
+        Testo.fail "added component not found in root_components")
+
+let tests =
+  [ test_remove_component; test_add_component ] |> Testo.categorize "overlay"

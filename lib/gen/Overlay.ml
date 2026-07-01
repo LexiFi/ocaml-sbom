@@ -86,14 +86,14 @@ let build_dependents_map (edges : S.dep_edge list) :
     edges;
   tbl
 
-(* Algorithm for recursive removal:
+(* Algorithm:
    1. Seed to_remove with every component that matches the filter.
    2. Repeat until stable: for each remaining non-root component, if every
-      component that directly depends on it is already in to_remove, add it
-      too (it is now an orphan).
+      component that directly depends on it is already in to_remove (or it
+      has no dependents at all), add it too.
    3. Drop from components, root_components, and dep_edges anything whose
-      src or dst key is in to_remove. *)
-let apply_remove_component (op : O.remove_component) (doc : S.document) :
+      key, src, or dst is in to_remove. *)
+let apply_remove_component (op : O.component_filter) (doc : S.document) :
     S.document =
   let to_remove = Hashtbl.create 16 in
   List.iter
@@ -101,36 +101,31 @@ let apply_remove_component (op : O.remove_component) (doc : S.document) :
       if matches_filter ~key:op.key ~name:op.name c then
         Hashtbl.replace to_remove c.key ())
     doc.components;
-  if op.recursive then begin
-    let roots =
-      let tbl = Hashtbl.create 8 in
-      List.iter
-        (fun (p : Sbom_types.Purl.t) -> Hashtbl.replace tbl p ())
-        doc.root_components;
-      tbl
-    in
-    let changed = ref true in
-    while !changed do
-      changed := false;
-      let dep_map = build_dependents_map doc.dep_edges in
-      List.iter
-        (fun c ->
-          let k = c.S.key in
-          if (not (Hashtbl.mem to_remove k)) && not (Hashtbl.mem roots k) then begin
-            let dependents =
-              Option.value ~default:[] (Hashtbl.find_opt dep_map k)
-            in
-            if
-              dependents <> []
-              && List.for_all (Hashtbl.mem to_remove) dependents
-            then begin
-              Hashtbl.replace to_remove k ();
-              changed := true
-            end
-          end)
-        doc.components
-    done
-  end;
+  let roots =
+    let tbl = Hashtbl.create 8 in
+    List.iter
+      (fun (p : Sbom_types.Purl.t) -> Hashtbl.replace tbl p ())
+      doc.root_components;
+    tbl
+  in
+  let changed = ref true in
+  while !changed do
+    changed := false;
+    let dep_map = build_dependents_map doc.dep_edges in
+    List.iter
+      (fun c ->
+        let k = c.S.key in
+        if (not (Hashtbl.mem to_remove k)) && not (Hashtbl.mem roots k) then begin
+          let dependents =
+            Option.value ~default:[] (Hashtbl.find_opt dep_map k)
+          in
+          if List.for_all (Hashtbl.mem to_remove) dependents then begin
+            Hashtbl.replace to_remove k ();
+            changed := true
+          end
+        end)
+      doc.components
+  done;
   let is_kept c = not (Hashtbl.mem to_remove c.S.key) in
   let components = List.filter is_kept doc.components in
   let root_components =
@@ -201,7 +196,11 @@ let apply_add_component (comp : S.component) (doc : S.document) : S.document =
       "overlay: cannot add component %S: a component with this key already \
        exists"
       key_str;
-  { doc with components = doc.components @ [ comp ] }
+  {
+    doc with
+    components = doc.components @ [ comp ];
+    root_components = doc.root_components @ [ comp.key ];
+  }
 
 (* --- Top-level ----------------------------------------------------------- *)
 
