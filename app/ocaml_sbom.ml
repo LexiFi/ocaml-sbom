@@ -48,7 +48,12 @@ module Gen = struct
         ~project_roots:conf.project_roots ()
     with
     | exception exn ->
-        eprintf "Error: %s\n" (Printexc.to_string exn);
+        let msg =
+          match exn with
+          | Failure msg -> msg
+          | exn -> Printexc.to_string exn
+        in
+        eprintf "Error: %s\n" msg;
         flush stderr;
         exit 1
     | warnings ->
@@ -241,6 +246,114 @@ module Export = struct
 end
 
 (****************************************************************************)
+(* 'overlay' subcommand — apply an overlay without regenerating the SBOM *)
+(****************************************************************************)
+
+module Apply_overlay = struct
+  type conf = {
+    input : string option; (* None = read from stdin *)
+    output : string option;
+    overlay_file : Fpath.t option;
+    verbose : bool;
+  }
+
+  let run (conf : conf) =
+    Sbom_util.Global.verbose := conf.verbose;
+    try
+      let json_str =
+        match conf.input with
+        | None -> In_channel.input_all stdin
+        | Some path -> In_channel.with_open_text path In_channel.input_all
+      in
+      let document = Sbom_types.Ocaml_sbom.Document.of_json json_str in
+      let overlay_path =
+        match conf.overlay_file with
+        | Some p -> Some p
+        | None ->
+            let default = Fpath.v Sbom_gen.Overlay.default_name in
+            if Sys.file_exists (Fpath.to_string default) then Some default
+            else None
+      in
+      let document =
+        match overlay_path with
+        | None -> document
+        | Some path ->
+            let overlay = Sbom_gen.Overlay.load path in
+            Sbom_gen.Overlay.apply document overlay
+      in
+      let output_str =
+        Sbom_types.Ocaml_sbom.Document.to_json document |> Yojson.Safe.prettify
+      in
+      let oc =
+        match conf.output with
+        | None -> stdout
+        | Some path -> open_out path
+      in
+      fprintf oc "%s\n" output_str;
+      if conf.output <> None then close_out oc
+    with
+    | Failure msg ->
+        eprintf "Error: %s\n" msg;
+        flush stderr;
+        exit 1
+    | exn ->
+        eprintf "Error: %s\n" (Printexc.to_string exn);
+        flush stderr;
+        exit 1
+
+  let input_term : string option Term.t =
+    let info =
+      Arg.info [] ~docv:"INPUT"
+        ~doc:
+          "Path to an SBOM file in $(mname)'s internal format, as produced by \
+           $(b,ocaml-sbom gen). Reads from standard input when omitted."
+    in
+    Arg.value (Arg.pos 0 (Arg.some Arg.string) None info)
+
+  let cmd_term =
+    let combine input output overlay_file verbose =
+      run
+        {
+          input;
+          output;
+          overlay_file = Option.map Fpath.v overlay_file;
+          verbose;
+        }
+    in
+    Term.(
+      const combine $ input_term $ output_file_term $ overlay_file_term
+      $ verbose_term)
+
+  let doc = "apply an overlay to an existing SBOM"
+
+  let man =
+    [
+      `S Manpage.s_description;
+      `P
+        "Read an SBOM from $(b,INPUT) (a file in $(mname)'s internal format) \
+         and apply the overlay specified by $(b,--overlay), writing the \
+         patched SBOM to $(b,--output) (or standard output).";
+      `P
+        ("If $(b,--overlay) is not given, the file $(b,"
+       ^ Sbom_gen.Overlay.default_name
+       ^ ") in the current directory is used when it exists.");
+      `P
+        "This subcommand is useful for quickly testing the effect of edits in \
+         an overlay file without having to re-run the full $(b,gen) step, \
+         which invokes opam and can be slow.";
+      `S Manpage.s_examples;
+      `Pre "$(mname) overlay sbom.json";
+      `Pre "$(mname) overlay sbom.json --overlay fixes.json";
+      `Pre "$(mname) overlay sbom.json -o patched.json";
+      `Pre "$(mname) gen | $(mname) overlay";
+    ]
+
+  let cmd =
+    let info = Cmd.info "overlay" ~doc ~man in
+    Cmd.v info cmd_term
+end
+
+(****************************************************************************)
 (* Root command *)
 (****************************************************************************)
 
@@ -268,7 +381,7 @@ let man =
     `P "Report issues at https://github.com/mjambon/ocaml-sbom/issues.";
   ]
 
-let subcommands = [ Gen.cmd; Export.cmd ]
+let subcommands = [ Gen.cmd; Export.cmd; Apply_overlay.cmd ]
 
 let () =
   let info = Cmd.info "ocaml-sbom" ~version:"dev" ~doc ~man in

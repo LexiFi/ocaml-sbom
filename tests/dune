@@ -11,11 +11,12 @@
 ; Build the test executable like an ordinary OCaml executable
 (executable
  (name test)
+ (modules test test_overlay)
  (libraries
    testo
    unix
+   sbom_gen
    sbom_util
    sbom_types
-   spdx_licenses
  )
 )

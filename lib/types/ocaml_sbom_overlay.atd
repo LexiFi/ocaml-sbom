@@ -5,86 +5,70 @@ from purl import t
 from ocaml_sbom as s
 import
   actor,
-  component_kind,
-  dep_edge,
-  licensing
-
-(******************************************************************)
-(* Patching machinery *)
-(******************************************************************)
-
-type 'a prop_patch
-  <doc text="
-    A modification that must be a applied to a property aka a record field.
-  ">
-  =
-[
-  | Merge
-     <doc text="merge into the existing property;
-                fail if it doesn't exist already">
-     of 'a
-  | Add
-     <doc text="add a new property; fail if it exists already">
-     of 'a
-  | Replace
-     <doc text="replace an existing property;
-                fail if it doesn't exist already">
-     of 'a
-  | Delete
-     <doc text="delete an existing item that has the given key;
-                fail if it doesn't exist already or if the property is
-                not optional">
-] <json repr="object">
-
-type ('k, 'v) elt_patch
-  <doc text="
-    This is used for patching list elements. The only difference is that
-    {{Delete}} takes the key needed to identify the element in the list.
-
-    The first parameter {{'k}} is the type of the unique identifier
-    of an element within the list.
-
-    The second parameter {{'v}} is the type of a list element or a patch
-    for a list element. A value contains the key which is an unpatchable
-    property, some patchable properties, and some unpatchable properties.
-
-    The validity of an operation depends on the context. For example,
-    an optional property can be deleted but not a required property.
-
-    None of the operations may change the key stored within the value.
-  ">
-  =
-[
-  | Merge of 'v
-  | Add of 'v
-  | Replace of 'v
-  | Delete of 'k
-] <json repr="object">
-
-
-(******************************************************************)
-(* Overlay *)
-(******************************************************************)
+  component,
+  licensing,
+  opam_package_kind
 
 type document_overlay
   <doc text="Fixes to apply to an SBOM document">
   =
 {
   format
-    <doc text="Magic number and format version, e.g.
-               {{\"ocaml-sbom-overlay/1.0\"}}">
+    <doc text="
+      Magic number and format version, e.g. {{\"ocaml-sbom-overlay/1.0\"}}
+    ">
     : string;
-  ~components : (purl.t, component) elt_patch list;
-  ~dep_edges : ((purl.t * purl.t), s.dep_edge) elt_patch list;
+  actions
+    <doc text="
+      A list of actions to perform sequentially on the SBOM document.
+    ">
+    : action list;
 }
 
-type component = {
-  name <doc text="the actual key for patching purposes"> : string;
-  ?version
-    <doc text="updating the version will automatically update the component's
-               purl ({{key}} field)">
-    : string prop_patch option;
-  ?kind : s.component_kind prop_patch option;
-  ~authors : (string, s.actor) elt_patch list;
-  ?licensing : s.licensing prop_patch option;
+type action = [
+  | Remove_component
+      <doc text="
+        Remove the selected components.
+      ">
+      of remove_component
+  | Set_component_properties of set_component_properties
+  | Add_component of s.component
+] <json repr="object">
+
+type component_filter
+  <doc text="
+    Any property set here is used as a filter to select components.
+    If no field is set, all the components will be selected.
+  ">
+  = {
+  ?key <doc text="matches the {{key}} of a component">: purl.t option;
+  ?name <doc text="matches the {{name}} of a component">: string option;
+}
+
+type remove_component = {
+  inherit component_filter;
+  ~recursive
+    <doc text="
+      If {{true}}, the dependencies of the selected components are also
+      removed if nothing else depends on them.
+    ">
+    : bool;
+}
+
+type set_component_properties = {
+  inherit component_filter;
+  ?opam_package_kind : s.opam_package_kind option;
+  ?spdx_license
+    <doc text="
+      Replace the license with an SPDX license expression.
+      It will be parsed and validated.
+    ">
+    : string option;
+  ?licensing
+    <doc text="
+      A complete specification of the licensing terms.
+      Supports custom licenses.
+    "> : s.licensing option;
+  ?authors : s.actor list option;
+  ?maintainers : s.actor list option;
 }

@@ -34,5 +34,5 @@ let command_tests =
   [ test_capture_stdout; test_read_from_string; test_missing_command ]
   |> Testo.categorize "command"
 
-let tests _env = command_tests
+let tests _env = command_tests @ Test_overlay.tests
 let () = Testo.interpret_argv ~project_name:"ocaml-sbom" tests

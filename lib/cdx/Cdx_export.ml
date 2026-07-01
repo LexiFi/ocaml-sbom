@@ -138,6 +138,13 @@ let build_scope_map (edges : S.dep_edge list) :
 
 let component_to_cdx (scope_map : (string, C.componentScope) Hashtbl.t)
     (c : S.component) : C.component =
+  let type_ =
+    match c.kind with
+    | Opam_package (Known { library = true; executable = false }) -> C.Library
+    | Opam_package _ ->
+        (* default prescribed by CycloneDX *)
+        C.Application
+  in
   let purl = (c.key :> string) in
   let licenses = licensing_to_cdx c.licensing in
   let ext_refs =
@@ -155,7 +162,7 @@ let component_to_cdx (scope_map : (string, C.componentScope) Hashtbl.t)
     | [] -> None
     | cs -> Some (List.map checksum_to_cdx cs)
   in
-  C.create_component ~type_:C.Library ~name:c.name
+  C.create_component ~type_ ~name:c.name
     ~version:(C.create_version c.version)
     ~bomref:(C.create_refType purl) ~purl
     ?scope:(Hashtbl.find_opt scope_map purl)

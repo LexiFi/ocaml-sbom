@@ -144,8 +144,17 @@ let make_component
     ~source_distribution ()
 
 let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
-  (* TODO: add overlay support *)
-  ignore overlay_file;
+  (* Resolve overlay file: use the explicit path if given, otherwise look for
+     the default file name in the current directory. *)
+  let effective_overlay_file =
+    match overlay_file with
+    | Some _ -> overlay_file
+    | None ->
+        let default = Fpath.v Overlay.default_name in
+        if Sys.file_exists !!default then Some default else None
+  in
+  (* load the overlay file early so as to fail quickly if it's malformed *)
+  let overlay = Option.map Overlay.load effective_overlay_file in
   let opamfiles =
     List.concat_map Sbom_deps.Opam_resolve.find_opamfiles project_roots
   in
@@ -167,6 +176,11 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
       ~namespace:
         (Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()))
       ~root_components ~components ~dep_edges ()
+  in
+  let document =
+    match overlay with
+    | None -> document
+    | Some overlay -> Overlay.apply document overlay
   in
   let json_str = S.Document.to_json document |> Yojson.Safe.prettify in
   (match output_file with
