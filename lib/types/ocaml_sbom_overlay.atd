@@ -30,7 +30,7 @@ type action = [
       <doc text="
         Remove the selected components.
       ">
-      of remove_component
+      of component_filter
   | Set_component_properties of set_component_properties
   | Add_component of s.component
 ] <json repr="object">
@@ -43,16 +43,6 @@ type component_filter
   = {
   ?key <doc text="matches the {{key}} of a component">: purl.t option;
   ?name <doc text="matches the {{name}} of a component">: string option;
-}
-
-type remove_component = {
-  inherit component_filter;
-  ~recursive
-    <doc text="
-      If {{true}}, the dependencies of the selected components are also
-      removed if nothing else depends on them.
-    ">
-    : bool;
 }
 
 type set_component_properties = {
