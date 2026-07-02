@@ -175,12 +175,15 @@ module Export = struct
 
   let run (conf : conf) =
     Sbom_util.Global.verbose := conf.verbose;
-    let json_str =
+    let source, json_str =
       match conf.input with
-      | None -> In_channel.input_all stdin
-      | Some path -> In_channel.with_open_text path In_channel.input_all
+      | None -> ("<stdin>", In_channel.input_all stdin)
+      | Some path -> (path, In_channel.with_open_text path In_channel.input_all)
     in
     let document = Sbom_types.Ocaml_sbom.Document.of_json json_str in
+    (match Sbom_types.Validate.sbom document with
+    | Ok () -> ()
+    | Error msg -> ksprintf failwith "malformed SBOM '%s': %s" source msg);
     let output_str =
       match conf.format with
       | CycloneDX ->
@@ -279,7 +282,7 @@ module Apply_overlay = struct
         | None -> document
         | Some path ->
             let overlay = Sbom_gen.Overlay.load path in
-            Sbom_gen.Overlay.apply document overlay
+            Sbom_gen.Overlay.apply document overlay ~overlay_path:path
       in
       let output_str =
         Sbom_types.Ocaml_sbom.Document.to_json document |> Yojson.Safe.prettify

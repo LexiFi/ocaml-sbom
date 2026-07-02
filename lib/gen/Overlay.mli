@@ -13,6 +13,7 @@ val load : Fpath.t -> Sbom_types.Ocaml_sbom_overlay.document_overlay
 val apply :
   Sbom_types.Ocaml_sbom.document ->
   Sbom_types.Ocaml_sbom_overlay.document_overlay ->
+  overlay_path:Fpath.t ->
   Sbom_types.Ocaml_sbom.document
 (** [apply doc overlay] applies [overlay] to [doc] and returns the patched
     document. Raises [Failure] if any patch operation is invalid (e.g. replacing
