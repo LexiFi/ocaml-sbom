@@ -3,12 +3,17 @@
 open Printf
 module S = Sbom_types.Ocaml_sbom
 
+let version_of_purl purl =
+  match String.split_on_char '@' purl with
+  | [ _; v ] -> v
+  | _ -> failwith (sprintf "version_of_purl: unexpected PURL format: %S" purl)
+
 let component_json key name =
   sprintf
     {|{
       "key": "%s",
       "name": "%s",
-      "version": "1.0.0",
+      "version": "%s",
       "kind": { "Opam_package": "Unknown" },
       "authors": [],
       "maintainers": [],
@@ -16,7 +21,7 @@ let component_json key name =
       "tags": [],
       "source_distribution": { "url": "", "checksums": [] }
     }|}
-    key name
+    key name (version_of_purl key)
 
 (* myproject (root) -> depA -> depB *)
 let doc_json =
@@ -52,6 +57,7 @@ let parse ?overlay doc =
         Sbom_types.Ocaml_sbom_overlay.Document_overlay.of_json overlay
       in
       Sbom_gen.Overlay.apply doc overlay
+        ~overlay_path:(Fpath.v (sprintf "<in %s>" __FILE__))
 
 (* Removing depA should cascade: depB loses its only dependent and is also
    removed, leaving only the root component. The license patch on myproject
@@ -110,5 +116,49 @@ let test_add_component =
       if not (List.mem "pkg:opam/extra@3.0.0" root_keys) then
         Testo.fail "added component not found in root_components")
 
+(* A cycle between depA and depB should be caught by Validate.sbom.
+   We call the validator directly rather than through Overlay.apply because
+   the overlay path is irrelevant here. *)
+let test_cycle_validation =
+  Testo.create "cycle detected by validation" (fun () ->
+      let doc_json =
+        sprintf
+          {|{
+  "format": "ocaml-sbom/1.0",
+  "namespace": "12345678-1234-1234-1234-123456789abc",
+  "root_components": [ "pkg:opam/myproject@1.0.0" ],
+  "components": [ %s, %s, %s ],
+  "dep_edges": [
+    {
+      "src": "pkg:opam/myproject@1.0.0",
+      "dst": "pkg:opam/depA@1.0.0",
+      "scope": "Runtime"
+    },
+    {
+      "src": "pkg:opam/depA@1.0.0",
+      "dst": "pkg:opam/depB@1.0.0",
+      "scope": "Runtime"
+    },
+    {
+      "src": "pkg:opam/depB@1.0.0",
+      "dst": "pkg:opam/depA@1.0.0",
+      "scope": "Runtime"
+    }
+  ]
+}|}
+          (component_json "pkg:opam/myproject@1.0.0" "myproject")
+          (component_json "pkg:opam/depA@1.0.0" "depA")
+          (component_json "pkg:opam/depB@1.0.0" "depB")
+      in
+      let doc = S.Document.of_json doc_json in
+      match Sbom_types.Validate.sbom doc with
+      | Ok () -> Testo.fail "expected validation to detect cycle"
+      | Error msg ->
+          Testo.(check text)
+            "dependency cycle: pkg:opam/depA@1.0.0 -> pkg:opam/depB@1.0.0 -> \
+             pkg:opam/depA@1.0.0"
+            msg)
+
 let tests =
-  [ test_remove_component; test_add_component ] |> Testo.categorize "overlay"
+  [ test_remove_component; test_add_component; test_cycle_validation ]
+  |> Testo.categorize "overlay"

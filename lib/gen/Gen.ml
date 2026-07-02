@@ -154,7 +154,11 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
         if Sys.file_exists !!default then Some default else None
   in
   (* load the overlay file early so as to fail quickly if it's malformed *)
-  let overlay = Option.map Overlay.load effective_overlay_file in
+  let overlay =
+    match effective_overlay_file with
+    | None -> None
+    | Some path -> Some (path, Overlay.load path)
+  in
   let opamfiles =
     List.concat_map Sbom_deps.Opam_resolve.find_opamfiles project_roots
   in
@@ -177,10 +181,22 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
         (Uuidm.to_string (Uuidm.v4_gen (Random.State.make_self_init ()) ()))
       ~root_components ~components ~dep_edges ()
   in
+  (* We should not generate bad sboms but if do, better fail early *)
+  (match Sbom_types.Validate.sbom document with
+  | Ok () -> ()
+  | Error msg -> ksprintf failwith "internal error: malformed SBOM: %s" msg);
   let document =
     match overlay with
     | None -> document
-    | Some overlay -> Overlay.apply document overlay
+    | Some (overlay_path, overlay) ->
+        let document = Overlay.apply document overlay ~overlay_path in
+        (match Sbom_types.Validate.sbom document with
+        | Ok () -> ()
+        | Error msg ->
+            ksprintf failwith
+              "malformed SBOM after applying the overlay '%s': %s"
+              !!overlay_path msg);
+        document
   in
   let json_str = S.Document.to_json document |> Yojson.Safe.prettify in
   (match output_file with

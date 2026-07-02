@@ -210,11 +210,18 @@ let apply_action (doc : S.document) (action : O.action) : S.document =
   | Set_component_properties spec -> apply_set_properties spec doc
   | Add_component comp -> apply_add_component comp doc
 
-let apply (doc : S.document) (overlay : O.document_overlay) : S.document =
+let apply (doc : S.document) (overlay : O.document_overlay) ~overlay_path :
+    S.document =
   if overlay.format <> overlay_format_version then
     ksprintf failwith "overlay: unsupported format %S (expected %S)"
       overlay.format overlay_format_version;
-  List.fold_left apply_action doc overlay.actions
+  let doc = List.fold_left apply_action doc overlay.actions in
+  (match Sbom_types.Validate.sbom doc with
+  | Ok () -> ()
+  | Error msg ->
+      ksprintf failwith "malformed SBOM after applying the overlay '%s': %s"
+        !!overlay_path msg);
+  doc
 
 let load path =
   try
