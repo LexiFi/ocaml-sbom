@@ -16,3 +16,8 @@ test:
 .PHONY: clean
 clean:
 	dune clean
+
+.PHONY: sbom
+sbom: build
+	./ocaml-sbom -v -o ocaml-sbom.ocaml-sbom
+	./ocaml-sbom export ocaml-sbom.ocaml-sbom -o ocaml-sbom.cdx.json

@@ -13,6 +13,15 @@
 module S = Sbom_types.Ocaml_sbom
 module C = CycloneDX_1_6
 
+let deduplicate xs =
+  let seen = Hashtbl.create 10 in
+  xs
+  |> List.filter (fun x ->
+      if Hashtbl.mem seen x then false
+      else (
+        Hashtbl.add seen x ();
+        true))
+
 (* --- Licenses ------------------------------------------------------------ *)
 
 let license_atom_to_string (atom : S.license_atom) : string =
@@ -105,47 +114,74 @@ let actor_to_contact (actor : S.actor) : C.organizationalContact =
    all incoming edges: any Runtime or Build edge makes the component Required. *)
 let cdx_scope (s : S.dep_scope) : C.componentScope =
   match s with
-  | Runtime
-  | Build ->
+  | Build_and_runtime
+  | Runtime ->
       C.Required
+  | Build
   | Test
   | Dev
-  | Optional ->
+  | Doc ->
       C.Optional
 
-let merge_scope (a : C.componentScope) (b : C.componentScope) : C.componentScope
-    =
-  match (a, b) with
-  | C.Required, _
-  | _, C.Required ->
-      C.Required
-  | _ -> C.Optional
+(* Emit a more detailed scope as a custom property. It uses the
+   name of the corresponding Opam dependency flags when possible.
+
+   See https://github.com/CycloneDX/cyclonedx-property-taxonomy/blob/main/cdx.md
+   TODO: register the "cdx:opam:" namespace at the URL above.
+*)
+let opam_property_of_scope (scope : S.dep_scope) : C.property option =
+  let prop value = Some (C.create_property ~name:"cdx:opam:scope" ~value ()) in
+  match scope with
+  | Build_and_runtime -> None
+  | Runtime ->
+      (* This case isn't possible when derived from opam files.
+         It could occur with overlays defining arbitrary components
+         and dependencies.
+         Opam doesn't support a 'runtime' flag so we omit the property. *)
+      None
+  | Build -> prop "build"
+  | Test -> prop "with-test"
+  | Dev -> prop "with-dev-setup"
+  | Doc -> prop "with-doc"
+
+(* Prepare scope list that's as close as possible to Opam's filters *)
+let normalize_opam_scopes (scopes : S.dep_scope list) : S.dep_scope list =
+  if List.mem S.Build_and_runtime scopes then
+    List.filter
+      (function
+        | S.Runtime
+        | S.Build ->
+            false
+        | _ -> true)
+      scopes
+  else scopes
+
+let merge_scopes (scopes : S.dep_scope list) :
+    C.componentScope * C.property list =
+  let scopes = scopes |> deduplicate |> normalize_opam_scopes in
+  let cdx_scopes = List.map cdx_scope scopes in
+  let cdx_scope =
+    if List.mem C.Required cdx_scopes then C.Required else C.Optional
+  in
+  let properties = List.filter_map opam_property_of_scope scopes in
+  (cdx_scope, properties)
 
 let build_scope_map (edges : S.dep_edge list) :
-    (string, C.componentScope) Hashtbl.t =
+    (string, S.dep_scope list) Hashtbl.t =
   let tbl = Hashtbl.create 64 in
   List.iter
     (fun (e : S.dep_edge) ->
       let purl = (e.dst :> string) in
-      let s = cdx_scope e.scope in
+      let scope = e.scope in
       match Hashtbl.find_opt tbl purl with
-      | None -> Hashtbl.add tbl purl s
-      | Some prev -> Hashtbl.replace tbl purl (merge_scope prev s))
+      | None -> Hashtbl.add tbl purl [ scope ]
+      | Some scopes -> Hashtbl.replace tbl purl (scope :: scopes))
     edges;
   tbl
 
 (* --- Component conversion ------------------------------------------------ *)
 
-let deduplicate xs =
-  let seen = Hashtbl.create 10 in
-  xs
-  |> List.filter (fun x ->
-      if Hashtbl.mem seen x then false
-      else (
-        Hashtbl.add seen x ();
-        true))
-
-let component_to_cdx (scope_map : (string, C.componentScope) Hashtbl.t)
+let component_to_cdx (scope_map : (string, S.dep_scope list) Hashtbl.t)
     (c : S.component) : C.component =
   let type_ =
     match c.kind with
@@ -171,12 +207,17 @@ let component_to_cdx (scope_map : (string, C.componentScope) Hashtbl.t)
     | [] -> None
     | cs -> Some (List.map checksum_to_cdx cs)
   in
+  let scope, properties =
+    match Hashtbl.find_opt scope_map purl with
+    | None -> (None, None)
+    | Some scopes ->
+        let scope, properties = merge_scopes scopes in
+        (Some scope, Some properties)
+  in
   C.create_component ~type_ ~name:c.name
     ~version:(C.create_version c.version)
-    ~bomref:(C.create_refType purl) ~purl
-    ?scope:(Hashtbl.find_opt scope_map purl)
-    ?licenses ?description:c.description ?authors ?hashes
-    ?externalReferences:ext_refs ()
+    ~bomref:(C.create_refType purl) ?properties ~purl ?scope ?licenses
+    ?description:c.description ?authors ?hashes ?externalReferences:ext_refs ()
 
 (* --- Dependency graph ---------------------------------------------------- *)
 

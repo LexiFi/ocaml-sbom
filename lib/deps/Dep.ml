@@ -3,8 +3,8 @@
 type package_namespace = Opam
 
 type scopes = {
+  runtime : bool;
   build : bool;
-  install : bool;
   doc : bool;
   test : bool;
   dev : bool;

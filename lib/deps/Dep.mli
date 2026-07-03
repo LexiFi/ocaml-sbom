@@ -7,17 +7,24 @@
 type package_namespace = Opam
 
 type scopes = {
+  runtime : bool;
+      (** defaults to true; disabled by [build], [with-doc], [with-test], or
+          [with-dev-setup] *)
   build : bool;
       (** defaults to true; disabled by [with-doc], [with-test], or
-          [with-dev-setup] *)
-  install : bool;
-      (** defaults to true; disabled by [build], [with-doc], [with-test], or
           [with-dev-setup] *)
   doc : bool;  (** defaults to false; enabled by [with-doc] *)
   test : bool;  (** defaults to false; enabled by [with-test] *)
   dev : bool;  (** defaults to false; enabled by [with-dev-setup] *)
 }
-(** Known contexts where a dependency applies.
+(** Known contexts where a dependency applies. Each scope represents a different
+    context where a component is needed. If a component is needed for testing
+    and for building the documentation but not in other contexts, it can be
+    expressed with this record in a straightforward manner as
+    [{runtime=false; build=false; doc=true; test=true; dev=false}].
+
+    Some of combinations such as "runtime and not build" cannot be expressed
+    using Opam's dependency flags. See below.
 
     https://opam.ocaml.org/doc/1.2/Manual.html#opamfield-depends says:
 
