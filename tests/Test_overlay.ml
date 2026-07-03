@@ -35,12 +35,12 @@ let doc_json =
     {
       "src": "pkg:opam/myproject@1.0.0",
       "dst": "pkg:opam/depA@2.0.0",
-      "scope": "Runtime"
+      "scope": "All"
     },
     {
       "src": "pkg:opam/depA@2.0.0",
       "dst": "pkg:opam/depB@2.0.0",
-      "scope": "Runtime"
+      "scope": "All"
      }
   ]
 }|}
@@ -132,17 +132,17 @@ let test_cycle_validation =
     {
       "src": "pkg:opam/myproject@1.0.0",
       "dst": "pkg:opam/depA@1.0.0",
-      "scope": "Runtime"
+      "scope": "All"
     },
     {
       "src": "pkg:opam/depA@1.0.0",
       "dst": "pkg:opam/depB@1.0.0",
-      "scope": "Runtime"
+      "scope": "All"
     },
     {
       "src": "pkg:opam/depB@1.0.0",
       "dst": "pkg:opam/depA@1.0.0",
-      "scope": "Runtime"
+      "scope": "All"
     }
   ]
 }|}
