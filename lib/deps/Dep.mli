@@ -8,8 +8,8 @@ type package_namespace = Opam
 
 type scopes = {
   all : bool;
-      (** defaults to true; disabled by [build], [with-doc], [with-test], or
-          [with-dev-setup] *)
+      (** true unless a dependency flag such as [build], [with-doc],
+          [with-test], or [with-dev-setup] is found in the Opam file. *)
   build : bool;
   doc : bool;
   test : bool;
