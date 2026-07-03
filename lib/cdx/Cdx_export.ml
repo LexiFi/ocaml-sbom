@@ -114,9 +114,7 @@ let actor_to_contact (actor : S.actor) : C.organizationalContact =
    all incoming edges: any Runtime or Build edge makes the component Required. *)
 let cdx_scope (s : S.dep_scope) : C.componentScope =
   match s with
-  | Build_and_runtime
-  | Runtime ->
-      C.Required
+  | All -> C.Required
   | Build
   | Test
   | Dev
@@ -129,16 +127,10 @@ let cdx_scope (s : S.dep_scope) : C.componentScope =
    See https://github.com/CycloneDX/cyclonedx-property-taxonomy/blob/main/cdx.md
    TODO: register the "cdx:opam:" namespace at the URL above.
 *)
-let opam_property_of_scope (scope : S.dep_scope) : C.property option =
-  let prop value = Some (C.create_property ~name:"cdx:opam:scope" ~value ()) in
+let opam_property_of_scope (scope : S.dep_scope) : C.property =
+  let prop value = C.create_property ~name:"cdx:opam:scope" ~value () in
   match scope with
-  | Build_and_runtime -> None
-  | Runtime ->
-      (* This case isn't possible when derived from opam files.
-         It could occur with overlays defining arbitrary components
-         and dependencies.
-         Opam doesn't support a 'runtime' flag so we omit the property. *)
-      None
+  | All -> prop "all"
   | Build -> prop "build"
   | Test -> prop "with-test"
   | Dev -> prop "with-dev-setup"
@@ -146,15 +138,7 @@ let opam_property_of_scope (scope : S.dep_scope) : C.property option =
 
 (* Prepare scope list that's as close as possible to Opam's filters *)
 let normalize_opam_scopes (scopes : S.dep_scope list) : S.dep_scope list =
-  if List.mem S.Build_and_runtime scopes then
-    List.filter
-      (function
-        | S.Runtime
-        | S.Build ->
-            false
-        | _ -> true)
-      scopes
-  else scopes
+  if List.mem S.All scopes then [ S.All ] else scopes
 
 let merge_scopes (scopes : S.dep_scope list) :
     C.componentScope * C.property list =
@@ -163,7 +147,7 @@ let merge_scopes (scopes : S.dep_scope list) :
   let cdx_scope =
     if List.mem C.Required cdx_scopes then C.Required else C.Optional
   in
-  let properties = List.filter_map opam_property_of_scope scopes in
+  let properties = List.map opam_property_of_scope scopes in
   (cdx_scope, properties)
 
 let build_scope_map (edges : S.dep_edge list) :

@@ -9,15 +9,12 @@ let _overlay_format = "ocaml-sbom-overlay/" ^ common_format_version
 let list_scopes (scopes : Sbom_deps.Dep.scopes) : S.dep_scope list =
   let res = ref [] in
   let add (x : S.dep_scope) = res := x :: !res in
-  if scopes.runtime && scopes.build then
-    (* This is the default situation in Opam. This special case
-       saves us from creating two edges in the dependency graph. *)
-    add Build_and_runtime
-  else if scopes.runtime then add Runtime
-  else if scopes.build then add Build;
-  if scopes.test then add Test;
-  if scopes.doc then add Doc;
-  if scopes.dev then add Dev;
+  if scopes.all then add All
+  else (
+    if scopes.build then add Build;
+    if scopes.test then add Test;
+    if scopes.doc then add Doc;
+    if scopes.dev then add Dev);
   !res
 
 let make_purl ({ kind; name; version } : Sbom_deps.Dep.component) =

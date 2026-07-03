@@ -7,15 +7,13 @@
 type package_namespace = Opam
 
 type scopes = {
-  runtime : bool;
-      (** defaults to true; disabled by [build], [with-doc], [with-test], or
-          [with-dev-setup] *)
+  all : bool;
+      (** true unless a dependency flag such as [build], [with-doc],
+          [with-test], or [with-dev-setup] is found in the Opam file. *)
   build : bool;
-      (** defaults to true; disabled by [with-doc], [with-test], or
-          [with-dev-setup] *)
-  doc : bool;  (** defaults to false; enabled by [with-doc] *)
-  test : bool;  (** defaults to false; enabled by [with-test] *)
-  dev : bool;  (** defaults to false; enabled by [with-dev-setup] *)
+  doc : bool;
+  test : bool;
+  dev : bool;
 }
 (** Known contexts where a dependency applies. Each scope represents a different
     context where a component is needed. If a component is needed for testing
