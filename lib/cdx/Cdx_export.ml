@@ -136,6 +136,15 @@ let build_scope_map (edges : S.dep_edge list) :
 
 (* --- Component conversion ------------------------------------------------ *)
 
+let deduplicate xs =
+  let seen = Hashtbl.create 10 in
+  xs
+  |> List.filter (fun x ->
+      if Hashtbl.mem seen x then false
+      else (
+        Hashtbl.add seen x ();
+        true))
+
 let component_to_cdx (scope_map : (string, C.componentScope) Hashtbl.t)
     (c : S.component) : C.component =
   let type_ =
@@ -153,7 +162,7 @@ let component_to_cdx (scope_map : (string, C.componentScope) Hashtbl.t)
     | refs -> Some refs
   in
   let authors =
-    match c.authors @ c.maintainers with
+    match c.authors @ c.maintainers |> deduplicate with
     | [] -> None
     | cs -> Some (List.map actor_to_contact cs)
   in
