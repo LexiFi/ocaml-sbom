@@ -120,14 +120,11 @@ type dep_scope
   ">
   =
 [
-  | Build_and_runtime
+  | All
       <doc text="
-        Opam's default. In SPDX 3.0, this requires two edges if we specify
-        scopes. Otherwise, the scope can be left unspecified in which
-        case there's just one edge.
+        Opam's default. The dependency is required in all contexts.
       ">
   | Build
-  | Runtime
   | Test
   | Dev
   | Doc

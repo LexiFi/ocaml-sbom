@@ -171,8 +171,8 @@ let scopes_of_constraint constraints_string : Dep.scopes =
   let test_only = contains_with_test constraints_string in
   let dev_only = contains_with_dev_setup constraints_string in
   {
-    runtime = not (build_only || doc_only || test_only || dev_only);
-    build = not (doc_only || test_only || dev_only);
+    all = not (build_only || doc_only || test_only || dev_only);
+    build = build_only;
     doc = doc_only;
     test = test_only;
     dev = dev_only;
@@ -180,7 +180,7 @@ let scopes_of_constraint constraints_string : Dep.scopes =
 
 (* = scopes_of_constraint "" *)
 let default_scopes : Dep.scopes =
-  { runtime = true; build = true; doc = false; test = false; dev = false }
+  { all = true; build = true; doc = true; test = true; dev = true }
 
 let edge_of_opam_dep (src : Dep.component) (dst_pkg : Opam_tree.package) : Dep.t
     =
@@ -315,12 +315,13 @@ let resolve ~use_lockfiles ~opamfiles =
   (root_names, deps, sources, package_info, warnings)
 
 let merge_scopes (a : Dep.scopes) (b : Dep.scopes) : Dep.scopes =
+  let all = a.all || b.all in
   {
-    runtime = a.runtime || b.runtime;
-    build = a.build || b.build;
-    doc = a.doc || b.doc;
-    test = a.test || b.test;
-    dev = a.dev || b.dev;
+    all;
+    build = all || a.build || b.build;
+    doc = all || a.doc || b.doc;
+    test = all || a.test || b.test;
+    dev = all || a.dev || b.dev;
   }
 
 (* Handle duplicates, derive lists of nodes from the edges *)
