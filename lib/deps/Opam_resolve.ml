@@ -171,8 +171,8 @@ let scopes_of_constraint constraints_string : Dep.scopes =
   let test_only = contains_with_test constraints_string in
   let dev_only = contains_with_dev_setup constraints_string in
   {
+    runtime = not (build_only || doc_only || test_only || dev_only);
     build = not (doc_only || test_only || dev_only);
-    install = not (build_only || doc_only || test_only || dev_only);
     doc = doc_only;
     test = test_only;
     dev = dev_only;
@@ -180,7 +180,7 @@ let scopes_of_constraint constraints_string : Dep.scopes =
 
 (* = scopes_of_constraint "" *)
 let default_scopes : Dep.scopes =
-  { build = true; install = true; doc = false; test = false; dev = false }
+  { runtime = true; build = true; doc = false; test = false; dev = false }
 
 let edge_of_opam_dep (src : Dep.component) (dst_pkg : Opam_tree.package) : Dep.t
     =
@@ -316,7 +316,7 @@ let resolve ~use_lockfiles ~opamfiles =
 
 let merge_scopes (a : Dep.scopes) (b : Dep.scopes) : Dep.scopes =
   {
-    install = a.install || b.install;
+    runtime = a.runtime || b.runtime;
     build = a.build || b.build;
     doc = a.doc || b.doc;
     test = a.test || b.test;

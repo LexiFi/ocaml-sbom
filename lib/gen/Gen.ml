@@ -6,15 +6,19 @@ let common_format_version = "1.0"
 let ocaml_sbom_format = "ocaml-sbom/" ^ common_format_version
 let _overlay_format = "ocaml-sbom-overlay/" ^ common_format_version
 
-let make_scope (scopes : Sbom_deps.Dep.scopes) : S.dep_scope =
-  if scopes.install then Runtime
-  else if scopes.build then Build
-  else if scopes.test then Test
-  else if scopes.doc then Optional
-  else if scopes.dev then Dev
-  else
-    (* empty scope - this shouldn't happen; fall back to the safest option *)
-    Runtime
+let list_scopes (scopes : Sbom_deps.Dep.scopes) : S.dep_scope list =
+  let res = ref [] in
+  let add (x : S.dep_scope) = res := x :: !res in
+  if scopes.runtime && scopes.build then
+    (* This is the default situation in Opam. This special case
+       saves us from creating two edges in the dependency graph. *)
+    add Build_and_runtime
+  else if scopes.runtime then add Runtime
+  else if scopes.build then add Build;
+  if scopes.test then add Test;
+  if scopes.doc then add Doc;
+  if scopes.dev then add Dev;
+  !res
 
 let make_purl ({ kind; name; version } : Sbom_deps.Dep.component) =
   assert (kind = Opam);
@@ -168,11 +172,12 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   let root_components = List.map make_purl deps.root_components in
   let components = List.map (make_component package_info) deps.components in
   let dep_edges =
-    List.map
+    List.concat_map
       (fun (dep : Sbom_deps.Dep.t) ->
-        let scope = make_scope dep.scopes in
-        S.create_dep_edge ~src:(make_purl dep.src) ~dst:(make_purl dep.dst)
-          ~scope ())
+        list_scopes dep.scopes
+        |> List.map (fun scope ->
+            S.create_dep_edge ~src:(make_purl dep.src) ~dst:(make_purl dep.dst)
+              ~scope ()))
       deps.edges
   in
   let document =
