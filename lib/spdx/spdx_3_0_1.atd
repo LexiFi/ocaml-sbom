@@ -1,0 +1,85 @@
+(* Hand-crafted well-typed subset of the SPDX 3.0.1 schema.
+   Only covers the element types emitted by our SBOM export.
+   The full generated schema is preserved in spdx_3_0_1.generated.atd for reference.
+
+   Spec: https://spdx.github.io/spdx-3-model/
+*)
+
+(* An IRI is just a string in practice. *)
+type iri = string
+
+(* Embedded in every SPDX 3.0 element. The "type" field is required by the
+   JSON-LD context to identify this object as a CreationInfo node. *)
+type creation_info = {
+  type_        <json name="type">        : string; (* always "CreationInfo" *)
+  spec_version <json name="specVersion"> : string;
+  created      : string;                           (* ISO 8601 UTC *)
+  created_by   <json name="createdBy">  : iri list;
+}
+
+type tool = {
+  spdx_id       <json name="spdxId">       : iri;
+  name          : string;
+  creation_info <json name="creationInfo"> : creation_info;
+}
+
+type spdx_document = {
+  spdx_id       <json name="spdxId">       : iri;
+  name          : string;
+  creation_info <json name="creationInfo"> : creation_info;
+  element       : iri list;
+  root_element  <json name="rootElement">  : iri list;
+}
+
+type software_package = {
+  spdx_id                     <json name="spdxId">                    : iri;
+  name                        : string;
+  creation_info               <json name="creationInfo">              : creation_info;
+  software_package_version    <json name="software_packageVersion">   : string;
+  software_package_url        <json name="software_packageUrl">       : iri;
+  ?software_download_location <json name="software_downloadLocation"> : string option;
+  ?license_declared           <json name="licenseDeclared">           : string option;
+  ?license_concluded          <json name="licenseConcluded">          : string option;
+  ?description                : string option;
+}
+
+(* LifecycleScopeType values used on Relationship.scope *)
+type lifecycle_scope = [
+  | Runtime     <json name="runtime">
+  | Build       <json name="build">
+  | Test        <json name="test">
+  | Development <json name="development">
+  | Other       <json name="other">
+] <ocaml repr="classic">
+
+(* Subset of RelationshipType values we emit *)
+type relationship_type = [
+  | DependsOn <json name="dependsOn">
+  | Describes <json name="describes">
+] <ocaml repr="classic">
+
+(* from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
+   keywords; <json name="..."> maps them to the correct JSON field names. *)
+type lifecycle_scoped_relationship = {
+  spdx_id           <json name="spdxId">           : iri;
+  creation_info     <json name="creationInfo">      : creation_info;
+  from_             <json name="from">              : iri;
+  to_               <json name="to">                : iri list;
+  relationship_type <json name="relationshipType">  : relationship_type;
+  ?scope            : lifecycle_scope option;
+}
+
+(* The adapter (Spdx_3_0_1_adapter) reads/writes the "type" field of each
+   JSON object to route between variants, so the record types above do not
+   carry a type_ field. *)
+type graph_element = [
+  | SpdxDocument                <json name="SpdxDocument">                of spdx_document
+  | Tool                        <json name="Tool">                        of tool
+  | Software_Package            <json name="software_Package">            of software_package
+  | LifecycleScopedRelationship <json name="LifecycleScopedRelationship"> of lifecycle_scoped_relationship
+] <json adapter.ocaml="Spdx_3_0_1_adapter"> <ocaml repr="classic">
+
+type root_json = {
+  context <json name="@context"> : string;
+  graph   <json name="@graph">   : graph_element list;
+}

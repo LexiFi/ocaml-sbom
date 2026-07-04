@@ -205,8 +205,13 @@ module Export = struct
           Cdx.Cdx_export.of_document document
           |> Cdx.CycloneDX_1_6.yojson_of_cycloneDXBillofMaterialsStandard
           |> Yojson.Safe.pretty_to_string
-      | SPDX_2_3 -> failwith "export: SPDX 2.3 output is not yet implemented"
-      | SPDX_3_0 -> failwith "export: SPDX 3.0 output is not yet implemented"
+      | SPDX_2_3 ->
+          Spdx.Spdx_export.to_spdx_2_3 document
+          |> Spdx.Spdx_2_3_1_dev.yojson_of_sPDX231dev
+          |> Yojson.Safe.pretty_to_string
+      | SPDX_3_0 ->
+          Spdx.Spdx_export.to_spdx_3_0 document
+          |> Spdx.Spdx_3_0_1.yojson_of_root_json |> Yojson.Safe.pretty_to_string
     in
     let oc =
       match conf.output with
