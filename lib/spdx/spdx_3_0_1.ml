@@ -2,9 +2,11 @@
 [@@@ocaml.warning "-27-32-33-35-39"]
 
 (** Hand-crafted well-typed subset of the SPDX 3.0.1 schema. Only covers the
-    element types emitted by our SBOM export. See also: spdx_3_0_1.generated.atd
-    (full generated schema, for reference). Spec:
-    https://spdx.github.io/spdx-3-model/ *)
+    element types emitted by our SBOM export.
+
+    See also: spdx_3_0_1.generated.atd (full generated schema, for reference).
+
+    Spec: https://spdx.github.io/spdx-3-model/ *)
 
 (* Inlined runtime — no external dependency needed. *)
 module Atdml_runtime = struct
@@ -90,7 +92,8 @@ module Atdml_runtime = struct
 end
 
 type iri = string
-(** An IRI — just a string in practice. *)
+(** An IRI (Internationalized Resource Identifier). Just a string in practice.
+*)
 
 let create_iri (x : string) : iri = x
 
@@ -114,15 +117,15 @@ module Iri = struct
 end
 
 type creation_info = {
-  type_ : string;  (** Always "CreationInfo". *)
+  type_ : string;  (** Always [CreationInfo]. *)
   spec_version : string;
   created : string;  (** ISO 8601 UTC timestamp. *)
   created_by : iri list;
 }
 (** Embedded inline in every SPDX 3.0 element. Must NOT appear as a separate
-    \@graph element with its own spdxId — the schema forbids it. The "type"
-    field is required by the JSON-LD context to identify this object as a
-    CreationInfo. *)
+    \@graph element with its own spdxId. The schema forbids it. The [type] field
+    is required by the JSON-LD context to identify this object as a
+    [CreationInfo]. *)
 
 let create_creation_info ~type_ ~spec_version ~created ~created_by () :
     creation_info =
@@ -609,7 +612,7 @@ type relationship = {
   to_ : iri list;
   relationship_type : relationship_type;
 }
-(** Plain Relationship (no lifecycle scope) — used for license associations. *)
+(** Plain Relationship (no lifecycle scope). Used for license associations. *)
 
 let create_relationship ~spdx_id ~creation_info ~from_ ~to_ ~relationship_type
     () : relationship =
@@ -727,8 +730,6 @@ type lifecycle_scoped_relationship = {
   relationship_type : relationship_type;
   scope : lifecycle_scope option;
 }
-(** from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
-    keywords; <json name="..."> maps them to the correct JSON field names. *)
 
 let create_lifecycle_scoped_relationship ~spdx_id ~creation_info ~from_ ~to_
     ~relationship_type ?scope () : lifecycle_scoped_relationship =
@@ -827,8 +828,8 @@ module Lifecycle_scoped_relationship = struct
 end
 
 (** Heterogeneous list element for the SPDX 3.0 \@graph array. The adapter
-    (Spdx_3_0_1_adapter) reads/writes the "type" field of each JSON object to
-    route between variants, so the record types above do not carry a type_
+    ([Spdx_3_0_1_adapter]) reads/writes the ["type"] field of each JSON object
+    to route between variants, so the record types above do not carry a [type_]
     field. *)
 type graph_element =
   | SoftwareAgent of software_agent

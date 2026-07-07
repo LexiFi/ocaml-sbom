@@ -1,23 +1,40 @@
-<doc text="Hand-crafted well-typed subset of the SPDX 3.0.1 schema.
-Only covers the element types emitted by our SBOM export.
-See also: spdx_3_0_1.generated.atd (full generated schema, for reference).
-Spec: https://spdx.github.io/spdx-3-model/">
+<doc text="
+  Hand-crafted well-typed subset of the SPDX 3.0.1 schema.
+  Only covers the element types emitted by our SBOM export.
 
-type iri <doc text="An IRI — just a string in practice."> = string
+  See also: spdx_3_0_1.generated.atd (full generated schema, for reference).
+
+  Spec: https://spdx.github.io/spdx-3-model/
+">
+
+type iri <doc text="
+  An IRI (Internationalized Resource Identifier). Just a string in practice.
+">
+  = string
 
 type creation_info
-  <doc text="Embedded inline in every SPDX 3.0 element.
-Must NOT appear as a separate @graph element with its own spdxId — the schema forbids it.
-The \"type\" field is required by the JSON-LD context to identify this object as a CreationInfo."> = {
-  type_ <json name="type"> <doc text="Always \"CreationInfo\"."> : string;
+  <doc text="
+    Embedded inline in every SPDX 3.0 element.
+    Must NOT appear as a separate @graph element with its own spdxId.
+    The schema forbids it.
+    The {{type}} field is required by the JSON-LD context to identify this
+    object as a {{CreationInfo}}.
+  "> = {
+  type_
+    <json name="type">
+    <doc text="Always {{CreationInfo}}.">
+    : string;
   spec_version <json name="specVersion"> : string;
   created <doc text="ISO 8601 UTC timestamp."> : string;
   created_by <json name="createdBy"> : iri list;
 }
 
 type software_agent
-  <doc text="SoftwareAgent (not Tool) is the Agent subclass that belongs in createdBy.
-In SPDX 3.0.1, Tool extends Element but NOT Agent; SoftwareAgent extends Agent."> = {
+  <doc text="
+    SoftwareAgent (not Tool) is the Agent subclass that belongs in createdBy.
+    In SPDX 3.0.1, Tool extends Element but NOT Agent; SoftwareAgent
+    extends Agent.
+  "> = {
   spdx_id <json name="spdxId"> : iri;
   name : string;
   creation_info <json name="creationInfo"> : creation_info;
@@ -37,14 +54,18 @@ type software_package = {
   creation_info <json name="creationInfo"> : creation_info;
   software_package_version <json name="software_packageVersion"> : string;
   software_package_url <json name="software_packageUrl"> : iri;
-  ?software_download_location <json name="software_downloadLocation"> : string option;
+  ?software_download_location
+    <json name="software_downloadLocation">
+    : string option;
   ?description : string option;
 }
 
 type simplelicensing_license_expression
-  <doc text="Holds a license SPDX expression string as a graph element.
-Packages reference these via hasDeclaredLicense / hasConcludedLicense
-relationships rather than embedding the string directly."> = {
+  <doc text="
+    Holds a license SPDX expression string as a graph element.
+    Packages reference these via hasDeclaredLicense / hasConcludedLicense
+    relationships rather than embedding the string directly.
+  "> = {
   spdx_id <json name="spdxId"> : iri;
   creation_info <json name="creationInfo"> : creation_info;
   license_expression <json name="simplelicensing_licenseExpression"> : string;
@@ -68,7 +89,10 @@ type relationship_type
 ] <ocaml repr="classic">
 
 type relationship
-  <doc text="Plain Relationship (no lifecycle scope) — used for license associations."> = {
+  <doc text="
+    Plain Relationship (no lifecycle scope). Used for license associations.
+  ">
+  = {
   spdx_id <json name="spdxId"> : iri;
   creation_info <json name="creationInfo"> : creation_info;
   from_ <json name="from"> : iri;
@@ -76,9 +100,7 @@ type relationship
   relationship_type <json name="relationshipType"> : relationship_type;
 }
 
-type lifecycle_scoped_relationship
-  <doc text="from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
-keywords; <json name=\"...\"> maps them to the correct JSON field names."> = {
+type lifecycle_scoped_relationship = {
   spdx_id <json name="spdxId"> : iri;
   creation_info <json name="creationInfo"> : creation_info;
   from_ <json name="from"> : iri;
@@ -88,16 +110,21 @@ keywords; <json name=\"...\"> maps them to the correct JSON field names."> = {
 }
 
 type graph_element
-  <doc text="Heterogeneous list element for the SPDX 3.0 @graph array.
-The adapter (Spdx_3_0_1_adapter) reads/writes the \"type\" field of each
-JSON object to route between variants, so the record types above do not
-carry a type_ field."> = [
+  <doc text="
+    Heterogeneous list element for the SPDX 3.0 @graph array.
+    The adapter ({{Spdx_3_0_1_adapter}}) reads/writes the {{\"type\"}}
+    field of each JSON object to route between variants, so the record
+    types above do not carry a {{type_}} field."> = [
   | SoftwareAgent <json name="SoftwareAgent"> of software_agent
   | SpdxDocument <json name="SpdxDocument"> of spdx_document
   | Software_Package <json name="software_Package"> of software_package
-  | LifecycleScopedRelationship <json name="LifecycleScopedRelationship"> of lifecycle_scoped_relationship
+  | LifecycleScopedRelationship
+      <json name="LifecycleScopedRelationship">
+      of lifecycle_scoped_relationship
   | Relationship <json name="Relationship"> of relationship
-  | SimpleLicensing_LicenseExpression <json name="simplelicensing_LicenseExpression"> of simplelicensing_license_expression
+  | SimpleLicensing_LicenseExpression
+       <json name="simplelicensing_LicenseExpression">
+       of simplelicensing_license_expression
 ] <json adapter.ocaml="Spdx_3_0_1_adapter"> <ocaml repr="classic">
 
 type root_json = {
