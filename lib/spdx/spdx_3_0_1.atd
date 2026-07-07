@@ -38,9 +38,16 @@ type software_package = {
   software_package_version    <json name="software_packageVersion">   : string;
   software_package_url        <json name="software_packageUrl">       : iri;
   ?software_download_location <json name="software_downloadLocation"> : string option;
-  ?license_declared           <json name="licenseDeclared">           : string option;
-  ?license_concluded          <json name="licenseConcluded">          : string option;
   ?description                : string option;
+}
+
+(* simplelicensing_LicenseExpression element — holds a license SPDX expression
+   string. Packages reference these via hasDeclaredLicense / hasConcludedLicense
+   relationships rather than embedding the string directly. *)
+type simplelicensing_license_expression = {
+  spdx_id         <json name="spdxId">                          : iri;
+  creation_info   <json name="creationInfo">                    : creation_info;
+  license_expression <json name="simplelicensing_licenseExpression"> : string;
 }
 
 (* LifecycleScopeType values used on Relationship.scope *)
@@ -54,9 +61,20 @@ type lifecycle_scope = [
 
 (* Subset of RelationshipType values we emit *)
 type relationship_type = [
-  | DependsOn <json name="dependsOn">
-  | Describes <json name="describes">
+  | DependsOn          <json name="dependsOn">
+  | Describes          <json name="describes">
+  | HasDeclaredLicense <json name="hasDeclaredLicense">
+  | HasConcludedLicense <json name="hasConcludedLicense">
 ] <ocaml repr="classic">
+
+(* Plain Relationship (no lifecycle scope) — used for license associations. *)
+type relationship = {
+  spdx_id           <json name="spdxId">          : iri;
+  creation_info     <json name="creationInfo">     : creation_info;
+  from_             <json name="from">             : iri;
+  to_               <json name="to">               : iri list;
+  relationship_type <json name="relationshipType"> : relationship_type;
+}
 
 (* from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
    keywords; <json name="..."> maps them to the correct JSON field names. *)
@@ -73,10 +91,12 @@ type lifecycle_scoped_relationship = {
    JSON object to route between variants, so the record types above do not
    carry a type_ field. *)
 type graph_element = [
-  | SpdxDocument                <json name="SpdxDocument">                of spdx_document
-  | Tool                        <json name="Tool">                        of tool
-  | Software_Package            <json name="software_Package">            of software_package
-  | LifecycleScopedRelationship <json name="LifecycleScopedRelationship"> of lifecycle_scoped_relationship
+  | SpdxDocument                       <json name="SpdxDocument">                              of spdx_document
+  | Tool                               <json name="Tool">                                      of tool
+  | Software_Package                   <json name="software_Package">                          of software_package
+  | LifecycleScopedRelationship        <json name="LifecycleScopedRelationship">               of lifecycle_scoped_relationship
+  | Relationship                       <json name="Relationship">                              of relationship
+  | SimpleLicensing_LicenseExpression  <json name="simplelicensing_LicenseExpression">         of simplelicensing_license_expression
 ] <json adapter.ocaml="Spdx_3_0_1_adapter"> <ocaml repr="classic">
 
 type root_json = {

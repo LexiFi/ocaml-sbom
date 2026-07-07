@@ -124,8 +124,6 @@ type software_package = {
   software_package_version : string;
   software_package_url : iri;
   software_download_location : string option;
-  license_declared : string option;
-  license_concluded : string option;
   description : string option;
 }
 
@@ -136,8 +134,6 @@ val create_software_package :
   software_package_version:string ->
   software_package_url:iri ->
   ?software_download_location:string ->
-  ?license_declared:string ->
-  ?license_concluded:string ->
   ?description:string ->
   unit ->
   software_package
@@ -157,8 +153,6 @@ module Software_package : sig
     software_package_version:string ->
     software_package_url:iri ->
     ?software_download_location:string ->
-    ?license_declared:string ->
-    ?license_concluded:string ->
     ?description:string ->
     unit ->
     t
@@ -169,7 +163,52 @@ module Software_package : sig
   val to_json : t -> string
 end
 
-type relationship_type = DependsOn | Describes
+type simplelicensing_license_expression = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  license_expression : string;
+}
+
+val create_simplelicensing_license_expression :
+  spdx_id:iri ->
+  creation_info:creation_info ->
+  license_expression:string ->
+  unit ->
+  simplelicensing_license_expression
+
+val simplelicensing_license_expression_of_yojson :
+  Yojson.Safe.t -> simplelicensing_license_expression
+
+val yojson_of_simplelicensing_license_expression :
+  simplelicensing_license_expression -> Yojson.Safe.t
+
+val simplelicensing_license_expression_of_json :
+  string -> simplelicensing_license_expression
+
+val json_of_simplelicensing_license_expression :
+  simplelicensing_license_expression -> string
+
+module Simplelicensing_license_expression : sig
+  type nonrec t = simplelicensing_license_expression
+
+  val create :
+    spdx_id:iri ->
+    creation_info:creation_info ->
+    license_expression:string ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type relationship_type =
+  | DependsOn
+  | Describes
+  | HasDeclaredLicense
+  | HasConcludedLicense
 
 val relationship_type_of_yojson : Yojson.Safe.t -> relationship_type
 val yojson_of_relationship_type : relationship_type -> Yojson.Safe.t
@@ -178,6 +217,46 @@ val json_of_relationship_type : relationship_type -> string
 
 module Relationship_type : sig
   type nonrec t = relationship_type
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type relationship = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  from_ : iri;
+  to_ : iri list;
+  relationship_type : relationship_type;
+}
+
+val create_relationship :
+  spdx_id:iri ->
+  creation_info:creation_info ->
+  from_:iri ->
+  to_:iri list ->
+  relationship_type:relationship_type ->
+  unit ->
+  relationship
+
+val relationship_of_yojson : Yojson.Safe.t -> relationship
+val yojson_of_relationship : relationship -> Yojson.Safe.t
+val relationship_of_json : string -> relationship
+val json_of_relationship : relationship -> string
+
+module Relationship : sig
+  type nonrec t = relationship
+
+  val create :
+    spdx_id:iri ->
+    creation_info:creation_info ->
+    from_:iri ->
+    to_:iri list ->
+    relationship_type:relationship_type ->
+    unit ->
+    t
 
   val of_yojson : Yojson.Safe.t -> t
   val to_yojson : t -> Yojson.Safe.t
@@ -256,6 +335,8 @@ type graph_element =
   | Tool of tool
   | Software_Package of software_package
   | LifecycleScopedRelationship of lifecycle_scoped_relationship
+  | Relationship of relationship
+  | SimpleLicensing_LicenseExpression of simplelicensing_license_expression
 
 val graph_element_of_yojson : Yojson.Safe.t -> graph_element
 val yojson_of_graph_element : graph_element -> Yojson.Safe.t

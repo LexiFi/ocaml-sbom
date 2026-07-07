@@ -171,10 +171,7 @@ module Export = struct
     ]
 
   let format_conv =
-    let names =
-      String.concat ", "
-        (List.map (fun (s, _) -> sprintf "$(b,%s)" s) all_formats)
-    in
+    let names = all_formats |> List.map fst |> String.concat ", " in
     let parse s =
       match List.assoc_opt s all_formats with
       | Some f -> Ok f

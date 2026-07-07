@@ -338,14 +338,12 @@ type software_package = {
   software_package_version : string;
   software_package_url : iri;
   software_download_location : string option;
-  license_declared : string option;
-  license_concluded : string option;
   description : string option;
 }
 
 let create_software_package ~spdx_id ~name ~creation_info
     ~software_package_version ~software_package_url ?software_download_location
-    ?license_declared ?license_concluded ?description () : software_package =
+    ?description () : software_package =
   {
     spdx_id;
     name;
@@ -353,8 +351,6 @@ let create_software_package ~spdx_id ~name ~creation_info
     software_package_version;
     software_package_url;
     software_download_location;
-    license_declared;
-    license_concluded;
     description;
   }
 
@@ -408,20 +404,6 @@ let software_package_of_yojson (x : Yojson.Safe.t) : software_package =
             None
         | Some v -> Some (Atdml_runtime.Yojson.string_of_yojson v)
       in
-      let license_declared =
-        match assoc_ "licenseDeclared" with
-        | None
-        | Some `Null ->
-            None
-        | Some v -> Some (Atdml_runtime.Yojson.string_of_yojson v)
-      in
-      let license_concluded =
-        match assoc_ "licenseConcluded" with
-        | None
-        | Some `Null ->
-            None
-        | Some v -> Some (Atdml_runtime.Yojson.string_of_yojson v)
-      in
       let description =
         match assoc_ "description" with
         | None
@@ -436,8 +418,6 @@ let software_package_of_yojson (x : Yojson.Safe.t) : software_package =
         software_package_version;
         software_package_url;
         software_download_location;
-        license_declared;
-        license_concluded;
         description;
       }
   | _ -> Atdml_runtime.Yojson.bad_type "software_package" x
@@ -461,14 +441,6 @@ let yojson_of_software_package (x : software_package) : Yojson.Safe.t =
                ( "software_downloadLocation",
                  Atdml_runtime.Yojson.yojson_of_string v );
              ]);
-         (match x.license_declared with
-         | None -> []
-         | Some v ->
-             [ ("licenseDeclared", Atdml_runtime.Yojson.yojson_of_string v) ]);
-         (match x.license_concluded with
-         | None -> []
-         | Some v ->
-             [ ("licenseConcluded", Atdml_runtime.Yojson.yojson_of_string v) ]);
          (match x.description with
          | None -> []
          | Some v ->
@@ -491,18 +463,104 @@ module Software_package = struct
   let to_json = json_of_software_package
 end
 
-type relationship_type = DependsOn | Describes
+type simplelicensing_license_expression = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  license_expression : string;
+}
+
+let create_simplelicensing_license_expression ~spdx_id ~creation_info
+    ~license_expression () : simplelicensing_license_expression =
+  { spdx_id; creation_info; license_expression }
+
+let simplelicensing_license_expression_of_yojson (x : Yojson.Safe.t) :
+    simplelicensing_license_expression =
+  match x with
+  | `Assoc fields ->
+      (* Duplicate JSON keys: behavior is unspecified (RFC 8259 §4 says keys SHOULD
+       be unique). Below the threshold, List.assoc_opt returns the first binding;
+       above it, the hashtable returns the last. *)
+      let assoc_ =
+        if Atdml_runtime.list_length_gt 5 fields then (
+          let tbl = Hashtbl.create 16 in
+          List.iter (fun (k, v) -> Hashtbl.add tbl k v) fields;
+          fun key -> Hashtbl.find_opt tbl key)
+        else fun key -> List.assoc_opt key fields
+      in
+      let spdx_id =
+        match assoc_ "spdxId" with
+        | Some v -> iri_of_yojson v
+        | None ->
+            Atdml_runtime.Yojson.missing_field
+              "simplelicensing_license_expression" "spdxId"
+      in
+      let creation_info =
+        match assoc_ "creationInfo" with
+        | Some v -> creation_info_of_yojson v
+        | None ->
+            Atdml_runtime.Yojson.missing_field
+              "simplelicensing_license_expression" "creationInfo"
+      in
+      let license_expression =
+        match assoc_ "simplelicensing_licenseExpression" with
+        | Some v -> Atdml_runtime.Yojson.string_of_yojson v
+        | None ->
+            Atdml_runtime.Yojson.missing_field
+              "simplelicensing_license_expression"
+              "simplelicensing_licenseExpression"
+      in
+      { spdx_id; creation_info; license_expression }
+  | _ -> Atdml_runtime.Yojson.bad_type "simplelicensing_license_expression" x
+
+let yojson_of_simplelicensing_license_expression
+    (x : simplelicensing_license_expression) : Yojson.Safe.t =
+  `Assoc
+    (List.concat
+       [
+         [ ("spdxId", yojson_of_iri x.spdx_id) ];
+         [ ("creationInfo", yojson_of_creation_info x.creation_info) ];
+         [
+           ( "simplelicensing_licenseExpression",
+             Atdml_runtime.Yojson.yojson_of_string x.license_expression );
+         ];
+       ])
+
+let simplelicensing_license_expression_of_json s =
+  simplelicensing_license_expression_of_yojson (Yojson.Safe.from_string s)
+
+let json_of_simplelicensing_license_expression x =
+  Yojson.Safe.to_string (yojson_of_simplelicensing_license_expression x)
+
+module Simplelicensing_license_expression = struct
+  type nonrec t = simplelicensing_license_expression
+
+  let create = create_simplelicensing_license_expression
+  let of_yojson = simplelicensing_license_expression_of_yojson
+  let to_yojson = yojson_of_simplelicensing_license_expression
+  let of_json = simplelicensing_license_expression_of_json
+  let to_json = json_of_simplelicensing_license_expression
+end
+
+type relationship_type =
+  | DependsOn
+  | Describes
+  | HasDeclaredLicense
+  | HasConcludedLicense
 
 let relationship_type_of_yojson (x : Yojson.Safe.t) : relationship_type =
   match x with
   | `String "dependsOn" -> DependsOn
   | `String "describes" -> Describes
+  | `String "hasDeclaredLicense" -> HasDeclaredLicense
+  | `String "hasConcludedLicense" -> HasConcludedLicense
   | _ -> Atdml_runtime.Yojson.bad_sum "relationship_type" x
 
 let yojson_of_relationship_type (x : relationship_type) : Yojson.Safe.t =
   match x with
   | DependsOn -> `String "dependsOn"
   | Describes -> `String "describes"
+  | HasDeclaredLicense -> `String "hasDeclaredLicense"
+  | HasConcludedLicense -> `String "hasConcludedLicense"
 
 let relationship_type_of_json s =
   relationship_type_of_yojson (Yojson.Safe.from_string s)
@@ -517,6 +575,87 @@ module Relationship_type = struct
   let to_yojson = yojson_of_relationship_type
   let of_json = relationship_type_of_json
   let to_json = json_of_relationship_type
+end
+
+type relationship = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  from_ : iri;
+  to_ : iri list;
+  relationship_type : relationship_type;
+}
+
+let create_relationship ~spdx_id ~creation_info ~from_ ~to_ ~relationship_type
+    () : relationship =
+  { spdx_id; creation_info; from_; to_; relationship_type }
+
+let relationship_of_yojson (x : Yojson.Safe.t) : relationship =
+  match x with
+  | `Assoc fields ->
+      (* Duplicate JSON keys: behavior is unspecified (RFC 8259 §4 says keys SHOULD
+       be unique). Below the threshold, List.assoc_opt returns the first binding;
+       above it, the hashtable returns the last. *)
+      let assoc_ =
+        if Atdml_runtime.list_length_gt 5 fields then (
+          let tbl = Hashtbl.create 16 in
+          List.iter (fun (k, v) -> Hashtbl.add tbl k v) fields;
+          fun key -> Hashtbl.find_opt tbl key)
+        else fun key -> List.assoc_opt key fields
+      in
+      let spdx_id =
+        match assoc_ "spdxId" with
+        | Some v -> iri_of_yojson v
+        | None -> Atdml_runtime.Yojson.missing_field "relationship" "spdxId"
+      in
+      let creation_info =
+        match assoc_ "creationInfo" with
+        | Some v -> creation_info_of_yojson v
+        | None ->
+            Atdml_runtime.Yojson.missing_field "relationship" "creationInfo"
+      in
+      let from_ =
+        match assoc_ "from" with
+        | Some v -> iri_of_yojson v
+        | None -> Atdml_runtime.Yojson.missing_field "relationship" "from"
+      in
+      let to_ =
+        match assoc_ "to" with
+        | Some v -> (Atdml_runtime.Yojson.list_of_yojson iri_of_yojson) v
+        | None -> Atdml_runtime.Yojson.missing_field "relationship" "to"
+      in
+      let relationship_type =
+        match assoc_ "relationshipType" with
+        | Some v -> relationship_type_of_yojson v
+        | None ->
+            Atdml_runtime.Yojson.missing_field "relationship" "relationshipType"
+      in
+      { spdx_id; creation_info; from_; to_; relationship_type }
+  | _ -> Atdml_runtime.Yojson.bad_type "relationship" x
+
+let yojson_of_relationship (x : relationship) : Yojson.Safe.t =
+  `Assoc
+    (List.concat
+       [
+         [ ("spdxId", yojson_of_iri x.spdx_id) ];
+         [ ("creationInfo", yojson_of_creation_info x.creation_info) ];
+         [ ("from", yojson_of_iri x.from_) ];
+         [ ("to", (Atdml_runtime.Yojson.yojson_of_list yojson_of_iri) x.to_) ];
+         [
+           ("relationshipType", yojson_of_relationship_type x.relationship_type);
+         ];
+       ])
+
+let relationship_of_json s = relationship_of_yojson (Yojson.Safe.from_string s)
+let json_of_relationship x = Yojson.Safe.to_string (yojson_of_relationship x)
+
+module Relationship = struct
+  type nonrec t = relationship
+
+  let create = create_relationship
+  let of_yojson = relationship_of_yojson
+  let to_yojson = yojson_of_relationship
+  let of_json = relationship_of_json
+  let to_json = json_of_relationship
 end
 
 type lifecycle_scope = Runtime | Build | Test | Development | Other
@@ -663,6 +802,8 @@ type graph_element =
   | Tool of tool
   | Software_Package of software_package
   | LifecycleScopedRelationship of lifecycle_scoped_relationship
+  | Relationship of relationship
+  | SimpleLicensing_LicenseExpression of simplelicensing_license_expression
 
 let graph_element_of_yojson (x : Yojson.Safe.t) : graph_element =
   let x = Spdx_3_0_1_adapter.normalize x in
@@ -674,6 +815,11 @@ let graph_element_of_yojson (x : Yojson.Safe.t) : graph_element =
       Software_Package (software_package_of_yojson v)
   | `List [ `String "LifecycleScopedRelationship"; v ] ->
       LifecycleScopedRelationship (lifecycle_scoped_relationship_of_yojson v)
+  | `List [ `String "Relationship"; v ] ->
+      Relationship (relationship_of_yojson v)
+  | `List [ `String "simplelicensing_LicenseExpression"; v ] ->
+      SimpleLicensing_LicenseExpression
+        (simplelicensing_license_expression_of_yojson v)
   | _ -> Atdml_runtime.Yojson.bad_sum "graph_element" x
 
 let yojson_of_graph_element (x : graph_element) : Yojson.Safe.t =
@@ -689,6 +835,14 @@ let yojson_of_graph_element (x : graph_element) : Yojson.Safe.t =
           [
             `String "LifecycleScopedRelationship";
             yojson_of_lifecycle_scoped_relationship v;
+          ]
+    | Relationship v ->
+        `List [ `String "Relationship"; yojson_of_relationship v ]
+    | SimpleLicensing_LicenseExpression v ->
+        `List
+          [
+            `String "simplelicensing_LicenseExpression";
+            yojson_of_simplelicensing_license_expression v;
           ]
   in
   Spdx_3_0_1_adapter.restore atdml_result_

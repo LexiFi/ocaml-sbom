@@ -61,6 +61,14 @@ let known_license_str_noassertion (k : S.license_expr S.known) =
   | Some s -> s
   | None -> "NOASSERTION"
 
+(* SPDX's downloadLocation must be NONE, NOASSERTION, or a URL matching a
+   strict pattern that excludes file:// paths. Return None for URLs we cannot
+   use, so callers can substitute NOASSERTION or omit the field. *)
+let spdx_download_url (url : string) : string option =
+  if url = "" || (String.length url >= 7 && String.sub url 0 7 = "file://") then
+    None
+  else Some url
+
 let doc_name (doc : S.document) =
   match doc.components with
   | [] -> "SBOM"
@@ -98,8 +106,9 @@ let component_to_package (c : S.component) : P.sPDX231devPackages =
              cs)
   in
   let download_location =
-    if c.source_distribution.url = "" then "NOASSERTION"
-    else c.source_distribution.url
+    Option.value
+      (spdx_download_url c.source_distribution.url)
+      ~default:"NOASSERTION"
   in
   let external_refs =
     Some
@@ -171,7 +180,7 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
   let spdx_id_of_purl (p : Sbom_types.Purl.t) =
     T.create_iri (ns_base ^ "#" ^ sanitize_for_id (p :> string))
   in
-  let rel_id i = T.create_iri (Printf.sprintf "%s#rel-%d" ns_base i) in
+  let dep_rel_id i = T.create_iri (Printf.sprintf "%s#rel-%d" ns_base i) in
   let creation_info =
     T.create_creation_info ~type_:"CreationInfo" ~spec_version:"3.0.1"
       ~created:ts ~created_by:[ tool_id ] ()
@@ -179,17 +188,76 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
   let tool =
     T.Tool (T.create_tool ~spdx_id:tool_id ~name:"ocaml-sbom" ~creation_info ())
   in
-  let spdx_doc =
-    T.SpdxDocument
-      (T.create_spdx_document ~spdx_id:(T.create_iri ns_base)
-         ~name:(doc_name doc) ~creation_info
-         ~element:
-           (List.map
-              (fun (c : S.component) -> spdx_id_of_purl c.key)
-              doc.components
-           @ List.mapi (fun i _ -> rel_id i) doc.dep_edges)
-         ~root_element:(List.map spdx_id_of_purl doc.root_components)
-         ())
+  (* Build license expression elements.
+     Each unique license string becomes one simplelicensing_LicenseExpression
+     element. We assign IRIs by index to keep them stable. *)
+  let license_strings : (string * T.iri) list =
+    let seen = Hashtbl.create 16 in
+    let result = ref [] in
+    let idx = ref 0 in
+    List.iter
+      (fun (c : S.component) ->
+        List.iter
+          (fun s ->
+            if not (Hashtbl.mem seen s) then begin
+              let iri =
+                T.create_iri (Printf.sprintf "%s#lic-%d" ns_base !idx)
+              in
+              Hashtbl.add seen s iri;
+              result := (s, iri) :: !result;
+              incr idx
+            end)
+          (List.filter_map Fun.id
+             [
+               known_license_str c.licensing.declared;
+               known_license_str c.licensing.concluded;
+             ]))
+      doc.components;
+    !result
+  in
+  let lic_iri_of_str s = List.assoc s license_strings in
+  (* License expression graph elements *)
+  let lic_elements =
+    List.map
+      (fun (expr_str, iri) ->
+        T.SimpleLicensing_LicenseExpression
+          (T.create_simplelicensing_license_expression ~spdx_id:iri
+             ~creation_info ~license_expression:expr_str ()))
+      license_strings
+  in
+  (* Per-package hasDeclaredLicense / hasConcludedLicense relationships *)
+  let lic_rel_counter = ref 0 in
+  let lic_relationships =
+    List.concat_map
+      (fun (c : S.component) ->
+        let make_rel rel_type expr_opt =
+          match expr_opt with
+          | None -> []
+          | Some s ->
+              let i = !lic_rel_counter in
+              incr lic_rel_counter;
+              [
+                T.Relationship
+                  (T.create_relationship
+                     ~spdx_id:
+                       (T.create_iri (Printf.sprintf "%s#lic-rel-%d" ns_base i))
+                     ~creation_info ~from_:(spdx_id_of_purl c.key)
+                     ~to_:[ lic_iri_of_str s ]
+                     ~relationship_type:rel_type ());
+              ]
+        in
+        make_rel T.HasDeclaredLicense (known_license_str c.licensing.declared)
+        @ make_rel T.HasConcludedLicense
+            (known_license_str c.licensing.concluded))
+      doc.components
+  in
+  let lic_element_iris = List.map snd license_strings in
+  let lic_rel_iris =
+    List.filter_map
+      (function
+        | T.Relationship r -> Some r.spdx_id
+        | _ -> None)
+      lic_relationships
   in
   let packages =
     List.map
@@ -199,18 +267,15 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
              ~name:c.name ~creation_info ~software_package_version:c.version
              ~software_package_url:(T.create_iri (c.key :> string))
              ?software_download_location:
-               (if c.source_distribution.url = "" then None
-                else Some c.source_distribution.url)
-             ?license_declared:(known_license_str c.licensing.declared)
-             ?license_concluded:(known_license_str c.licensing.concluded)
+               (spdx_download_url c.source_distribution.url)
              ?description:c.description ()))
       doc.components
   in
-  let relationships =
+  let dep_relationships =
     List.mapi
       (fun i (e : S.dep_edge) ->
         T.LifecycleScopedRelationship
-          (T.create_lifecycle_scoped_relationship ~spdx_id:(rel_id i)
+          (T.create_lifecycle_scoped_relationship ~spdx_id:(dep_rel_id i)
              ~creation_info ~from_:(spdx_id_of_purl e.src)
              ~to_:[ spdx_id_of_purl e.dst ]
              ~relationship_type:DependsOn
@@ -218,6 +283,21 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
              ()))
       doc.dep_edges
   in
+  let spdx_doc =
+    T.SpdxDocument
+      (T.create_spdx_document ~spdx_id:(T.create_iri ns_base)
+         ~name:(doc_name doc) ~creation_info
+         ~element:
+           (List.map
+              (fun (c : S.component) -> spdx_id_of_purl c.key)
+              doc.components
+           @ List.mapi (fun i _ -> dep_rel_id i) doc.dep_edges
+           @ lic_element_iris @ lic_rel_iris)
+         ~root_element:(List.map spdx_id_of_purl doc.root_components)
+         ())
+  in
   T.create_root_json ~context:"https://spdx.github.io/spdx-3-model/context.json"
-    ~graph:([ spdx_doc; tool ] @ packages @ relationships)
+    ~graph:
+      ([ spdx_doc; tool ] @ packages @ dep_relationships @ lic_elements
+     @ lic_relationships)
     ()
