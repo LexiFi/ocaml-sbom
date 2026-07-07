@@ -24,6 +24,10 @@ source. Build it and install it with (TODO)
 $ opam install ocaml-sbom
 ```
 
+To run `ocaml-sbom`, you'll need `opam` even if you obtained a
+pre-built `ocaml-sbom` executable. However, you only need the bare
+`opam` command. No need to install an OCaml compiler or any Opam packages.
+
 ## Usage
 
 The target project must ship with one or several Opam files. These are
