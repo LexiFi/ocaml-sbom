@@ -85,6 +85,7 @@ module Atdml_runtime = struct
 end
 
 type iri = string
+(** An IRI — just a string in practice. *)
 
 let create_iri (x : string) : iri = x
 
@@ -108,9 +109,9 @@ module Iri = struct
 end
 
 type creation_info = {
-  type_ : string;
+  type_ : string;  (** Always "CreationInfo". *)
   spec_version : string;
-  created : string;
+  created : string;  (** ISO 8601 UTC timestamp. *)
   created_by : iri list;
 }
 
@@ -410,6 +411,9 @@ type software_agent = {
   name : string;
   creation_info : creation_info;
 }
+(** SoftwareAgent (not Tool) is the Agent subclass that belongs in createdBy. In
+    SPDX 3.0.1, Tool extends Element but NOT Agent; SoftwareAgent extends Agent.
+*)
 
 let create_software_agent ~spdx_id ~name ~creation_info () : software_agent =
   { spdx_id; name; creation_info }
@@ -476,6 +480,9 @@ type simplelicensing_license_expression = {
   creation_info : creation_info;
   license_expression : string;
 }
+(** Holds a license SPDX expression string as a graph element. Packages
+    reference these via hasDeclaredLicense / hasConcludedLicense relationships
+    rather than embedding the string directly. *)
 
 let create_simplelicensing_license_expression ~spdx_id ~creation_info
     ~license_expression () : simplelicensing_license_expression =
@@ -549,6 +556,7 @@ module Simplelicensing_license_expression = struct
   let to_json = json_of_simplelicensing_license_expression
 end
 
+(** Subset of RelationshipType values we emit. *)
 type relationship_type =
   | DependsOn
   | Describes
@@ -592,6 +600,7 @@ type relationship = {
   to_ : iri list;
   relationship_type : relationship_type;
 }
+(** Plain Relationship (no lifecycle scope) — used for license associations. *)
 
 let create_relationship ~spdx_id ~creation_info ~from_ ~to_ ~relationship_type
     () : relationship =
@@ -666,6 +675,7 @@ module Relationship = struct
   let to_json = json_of_relationship
 end
 
+(** LifecycleScopeType values used on Relationship.scope. *)
 type lifecycle_scope = Runtime | Build | Test | Development | Other
 
 let lifecycle_scope_of_yojson (x : Yojson.Safe.t) : lifecycle_scope =
@@ -805,6 +815,10 @@ module Lifecycle_scoped_relationship = struct
   let to_json = json_of_lifecycle_scoped_relationship
 end
 
+(** Heterogeneous list element for the SPDX 3.0 \@graph array. The adapter
+    (Spdx_3_0_1_adapter) reads/writes the "type" field of each JSON object to
+    route between variants, so the record types above do not carry a type_
+    field. *)
 type graph_element =
   | SoftwareAgent of software_agent
   | SpdxDocument of spdx_document

@@ -1,6 +1,7 @@
 (* Auto-generated from "spdx_3_0_1.atd" by atdml. *)
 
 type iri = private string
+(** An IRI — just a string in practice. *)
 
 val create_iri : string -> iri
 val iri_of_yojson : Yojson.Safe.t -> iri
@@ -19,9 +20,9 @@ module Iri : sig
 end
 
 type creation_info = {
-  type_ : string;
+  type_ : string;  (** Always "CreationInfo". *)
   spec_version : string;
-  created : string;
+  created : string;  (** ISO 8601 UTC timestamp. *)
   created_by : iri list;
 }
 
@@ -146,6 +147,9 @@ type software_agent = {
   name : string;
   creation_info : creation_info;
 }
+(** SoftwareAgent (not Tool) is the Agent subclass that belongs in createdBy. In
+    SPDX 3.0.1, Tool extends Element but NOT Agent; SoftwareAgent extends Agent.
+*)
 
 val create_software_agent :
   spdx_id:iri ->
@@ -176,6 +180,9 @@ type simplelicensing_license_expression = {
   creation_info : creation_info;
   license_expression : string;
 }
+(** Holds a license SPDX expression string as a graph element. Packages
+    reference these via hasDeclaredLicense / hasConcludedLicense relationships
+    rather than embedding the string directly. *)
 
 val create_simplelicensing_license_expression :
   spdx_id:iri ->
@@ -212,6 +219,7 @@ module Simplelicensing_license_expression : sig
   val to_json : t -> string
 end
 
+(** Subset of RelationshipType values we emit. *)
 type relationship_type =
   | DependsOn
   | Describes
@@ -239,6 +247,7 @@ type relationship = {
   to_ : iri list;
   relationship_type : relationship_type;
 }
+(** Plain Relationship (no lifecycle scope) — used for license associations. *)
 
 val create_relationship :
   spdx_id:iri ->
@@ -272,6 +281,7 @@ module Relationship : sig
   val to_json : t -> string
 end
 
+(** LifecycleScopeType values used on Relationship.scope. *)
 type lifecycle_scope = Runtime | Build | Test | Development | Other
 
 val lifecycle_scope_of_yojson : Yojson.Safe.t -> lifecycle_scope
@@ -338,6 +348,10 @@ module Lifecycle_scoped_relationship : sig
   val to_json : t -> string
 end
 
+(** Heterogeneous list element for the SPDX 3.0 \@graph array. The adapter
+    (Spdx_3_0_1_adapter) reads/writes the "type" field of each JSON object to
+    route between variants, so the record types above do not carry a type_
+    field. *)
 type graph_element =
   | SoftwareAgent of software_agent
   | SpdxDocument of spdx_document
