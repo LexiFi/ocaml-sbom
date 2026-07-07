@@ -154,7 +154,7 @@ end
 (****************************************************************************)
 
 module Export = struct
-  type output_format = CycloneDX (* | SPDX *)
+  type output_format = CycloneDX_1_6 | SPDX_2_3 | SPDX_3_0
 
   type conf = {
     input : string option; (* None = read from stdin *)
@@ -163,13 +163,25 @@ module Export = struct
     verbose : bool;
   }
 
+  let all_formats =
+    [
+      ("cyclonedx-1.6", CycloneDX_1_6);
+      ("spdx-2.3", SPDX_2_3);
+      ("spdx-3.0", SPDX_3_0);
+    ]
+
   let format_conv =
-    let parse = function
-      | "cyclonedx" -> Ok CycloneDX
-      | s -> Error (`Msg (sprintf "unknown format %S, expected 'cyclonedx'" s))
+    let names = all_formats |> List.map fst |> String.concat ", " in
+    let parse s =
+      match List.assoc_opt s all_formats with
+      | Some f -> Ok f
+      | None ->
+          Error
+            (`Msg (sprintf "unknown format %S; expected one of: %s" s names))
     in
-    let print ppf = function
-      | CycloneDX -> Format.pp_print_string ppf "cyclonedx"
+    let print ppf f =
+      let s = fst (List.find (fun (_, f') -> f' = f) all_formats) in
+      Format.pp_print_string ppf s
     in
     Arg.conv ~docv:"FORMAT" (parse, print)
 
@@ -186,10 +198,17 @@ module Export = struct
     | Error msg -> ksprintf failwith "malformed SBOM '%s': %s" source msg);
     let output_str =
       match conf.format with
-      | CycloneDX ->
+      | CycloneDX_1_6 ->
           Cdx.Cdx_export.of_document document
           |> Cdx.CycloneDX_1_6.yojson_of_cycloneDXBillofMaterialsStandard
           |> Yojson.Safe.pretty_to_string
+      | SPDX_2_3 ->
+          Spdx.Spdx_export.to_spdx_2_3 document
+          |> Spdx.Spdx_2_3_1_dev.yojson_of_sPDX231dev
+          |> Yojson.Safe.pretty_to_string
+      | SPDX_3_0 ->
+          Spdx.Spdx_export.to_spdx_3_0 document
+          |> Spdx.Spdx_3_0_1.yojson_of_root_json |> Yojson.Safe.pretty_to_string
     in
     let oc =
       match conf.output with
@@ -214,10 +233,11 @@ module Export = struct
     let info =
       Arg.info [ "format" ] ~docv:"FORMAT"
         ~doc:
-          "Output format. Currently the only supported value is $(b,cyclonedx) \
-           (default)."
+          "Output format. Supported values: $(b,cyclonedx-1.6) (CycloneDX 1.6 \
+           JSON, default), $(b,spdx-2.3) (SPDX 2.3 tag-value or JSON), \
+           $(b,spdx-3.0) (SPDX 3.0 JSON-LD)."
     in
-    Arg.value (Arg.opt format_conv CycloneDX info)
+    Arg.value (Arg.opt format_conv CycloneDX_1_6 info)
 
   let cmd_term =
     let combine input output format verbose =
@@ -235,12 +255,15 @@ module Export = struct
         "Read an SBOM from $(b,INPUT) (a file written by $(b,ocaml-sbom gen)) \
          and convert it to a standard format, writing the result to \
          $(b,--output) (or standard output).";
-      `P
-        "The only supported output format is currently $(b,cyclonedx) \
-         (CycloneDX 1.6 JSON). More formats may be added in the future.";
+      `P "Supported output formats:";
+      `I ("$(b,cyclonedx-1.6)", "CycloneDX 1.6 JSON (default).");
+      `I ("$(b,spdx-2.3)", "SPDX 2.3.1 JSON.");
+      `I ("$(b,spdx-3.0)", "SPDX 3.0.1 JSON-LD.");
       `S Manpage.s_examples;
       `Pre "$(mname) export sbom.json";
-      `Pre "$(mname) export sbom.json --format cyclonedx -o bom.json";
+      `Pre "$(mname) export sbom.json --format cyclonedx-1.6 -o bom.json";
+      `Pre "$(mname) export sbom.json --format spdx-2.3 -o sbom.spdx.json";
+      `Pre "$(mname) export sbom.json --format spdx-3.0 -o sbom.spdx.json";
     ]
 
   let cmd =

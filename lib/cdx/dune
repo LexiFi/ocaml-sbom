@@ -1,8 +1,5 @@
 ; CycloneDX export
 ;
-; We only export to Cyclone DX. For best tool compatibility, we export to
-; a slightly older version rather than to the latest.
-;
 ; The ATD files were derived automatically from the JSON Schema specs
 ; using a patched version of 'jsonschema2atd'
 ; (https://github.com/mjambon/jsonschema2atd/tree/cyclonedx-support) which

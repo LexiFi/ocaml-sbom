@@ -1,0 +1,407 @@
+(* Auto-generated from "spdx_3_0_1.atd" by atdml. *)
+
+(** Hand-crafted well-typed subset of the SPDX 3.0.1 schema. Only covers the
+    element types emitted by our SBOM export.
+
+    See also: spdx_3_0_1.generated.atd (full generated schema, for reference).
+
+    Spec: https://spdx.github.io/spdx-3-model/ *)
+
+type iri = private string
+(** An IRI (Internationalized Resource Identifier). Just a string in practice.
+*)
+
+val create_iri : string -> iri
+val iri_of_yojson : Yojson.Safe.t -> iri
+val yojson_of_iri : iri -> Yojson.Safe.t
+val iri_of_json : string -> iri
+val json_of_iri : iri -> string
+
+module Iri : sig
+  type nonrec t = iri
+
+  val create : string -> t
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type creation_info = {
+  type_ : string;  (** Always [CreationInfo]. *)
+  spec_version : string;
+  created : string;  (** ISO 8601 UTC timestamp. *)
+  created_by : iri list;
+}
+(** Embedded inline in every SPDX 3.0 element. Must NOT appear as a separate
+    \@graph element with its own spdxId. The schema forbids it. The [type] field
+    is required by the JSON-LD context to identify this object as a
+    [CreationInfo]. *)
+
+val create_creation_info :
+  type_:string ->
+  spec_version:string ->
+  created:string ->
+  created_by:iri list ->
+  unit ->
+  creation_info
+
+val creation_info_of_yojson : Yojson.Safe.t -> creation_info
+val yojson_of_creation_info : creation_info -> Yojson.Safe.t
+val creation_info_of_json : string -> creation_info
+val json_of_creation_info : creation_info -> string
+
+module Creation_info : sig
+  type nonrec t = creation_info
+
+  val create :
+    type_:string ->
+    spec_version:string ->
+    created:string ->
+    created_by:iri list ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type spdx_document = {
+  spdx_id : iri;
+  name : string;
+  creation_info : creation_info;
+  element : iri list;
+  root_element : iri list;
+}
+
+val create_spdx_document :
+  spdx_id:iri ->
+  name:string ->
+  creation_info:creation_info ->
+  element:iri list ->
+  root_element:iri list ->
+  unit ->
+  spdx_document
+
+val spdx_document_of_yojson : Yojson.Safe.t -> spdx_document
+val yojson_of_spdx_document : spdx_document -> Yojson.Safe.t
+val spdx_document_of_json : string -> spdx_document
+val json_of_spdx_document : spdx_document -> string
+
+module Spdx_document : sig
+  type nonrec t = spdx_document
+
+  val create :
+    spdx_id:iri ->
+    name:string ->
+    creation_info:creation_info ->
+    element:iri list ->
+    root_element:iri list ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type software_package = {
+  spdx_id : iri;
+  name : string;
+  creation_info : creation_info;
+  software_package_version : string;
+  software_package_url : iri;
+  software_download_location : string option;
+  description : string option;
+}
+
+val create_software_package :
+  spdx_id:iri ->
+  name:string ->
+  creation_info:creation_info ->
+  software_package_version:string ->
+  software_package_url:iri ->
+  ?software_download_location:string ->
+  ?description:string ->
+  unit ->
+  software_package
+
+val software_package_of_yojson : Yojson.Safe.t -> software_package
+val yojson_of_software_package : software_package -> Yojson.Safe.t
+val software_package_of_json : string -> software_package
+val json_of_software_package : software_package -> string
+
+module Software_package : sig
+  type nonrec t = software_package
+
+  val create :
+    spdx_id:iri ->
+    name:string ->
+    creation_info:creation_info ->
+    software_package_version:string ->
+    software_package_url:iri ->
+    ?software_download_location:string ->
+    ?description:string ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type software_agent = {
+  spdx_id : iri;
+  name : string;
+  creation_info : creation_info;
+}
+(** SoftwareAgent (not Tool) is the Agent subclass that belongs in createdBy. In
+    SPDX 3.0.1, Tool extends Element but NOT Agent; SoftwareAgent extends Agent.
+*)
+
+val create_software_agent :
+  spdx_id:iri ->
+  name:string ->
+  creation_info:creation_info ->
+  unit ->
+  software_agent
+
+val software_agent_of_yojson : Yojson.Safe.t -> software_agent
+val yojson_of_software_agent : software_agent -> Yojson.Safe.t
+val software_agent_of_json : string -> software_agent
+val json_of_software_agent : software_agent -> string
+
+module Software_agent : sig
+  type nonrec t = software_agent
+
+  val create :
+    spdx_id:iri -> name:string -> creation_info:creation_info -> unit -> t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type simplelicensing_license_expression = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  license_expression : string;
+}
+(** Holds a license SPDX expression string as a graph element. Packages
+    reference these via hasDeclaredLicense / hasConcludedLicense relationships
+    rather than embedding the string directly. *)
+
+val create_simplelicensing_license_expression :
+  spdx_id:iri ->
+  creation_info:creation_info ->
+  license_expression:string ->
+  unit ->
+  simplelicensing_license_expression
+
+val simplelicensing_license_expression_of_yojson :
+  Yojson.Safe.t -> simplelicensing_license_expression
+
+val yojson_of_simplelicensing_license_expression :
+  simplelicensing_license_expression -> Yojson.Safe.t
+
+val simplelicensing_license_expression_of_json :
+  string -> simplelicensing_license_expression
+
+val json_of_simplelicensing_license_expression :
+  simplelicensing_license_expression -> string
+
+module Simplelicensing_license_expression : sig
+  type nonrec t = simplelicensing_license_expression
+
+  val create :
+    spdx_id:iri ->
+    creation_info:creation_info ->
+    license_expression:string ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+(** Subset of RelationshipType values we emit. *)
+type relationship_type =
+  | DependsOn
+  | Describes
+  | HasDeclaredLicense
+  | HasConcludedLicense
+
+val relationship_type_of_yojson : Yojson.Safe.t -> relationship_type
+val yojson_of_relationship_type : relationship_type -> Yojson.Safe.t
+val relationship_type_of_json : string -> relationship_type
+val json_of_relationship_type : relationship_type -> string
+
+module Relationship_type : sig
+  type nonrec t = relationship_type
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type relationship = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  from_ : iri;
+  to_ : iri list;
+  relationship_type : relationship_type;
+}
+(** Plain Relationship (no lifecycle scope). Used for license associations. *)
+
+val create_relationship :
+  spdx_id:iri ->
+  creation_info:creation_info ->
+  from_:iri ->
+  to_:iri list ->
+  relationship_type:relationship_type ->
+  unit ->
+  relationship
+
+val relationship_of_yojson : Yojson.Safe.t -> relationship
+val yojson_of_relationship : relationship -> Yojson.Safe.t
+val relationship_of_json : string -> relationship
+val json_of_relationship : relationship -> string
+
+module Relationship : sig
+  type nonrec t = relationship
+
+  val create :
+    spdx_id:iri ->
+    creation_info:creation_info ->
+    from_:iri ->
+    to_:iri list ->
+    relationship_type:relationship_type ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+(** LifecycleScopeType values used on Relationship.scope. *)
+type lifecycle_scope = Runtime | Build | Test | Development | Other
+
+val lifecycle_scope_of_yojson : Yojson.Safe.t -> lifecycle_scope
+val yojson_of_lifecycle_scope : lifecycle_scope -> Yojson.Safe.t
+val lifecycle_scope_of_json : string -> lifecycle_scope
+val json_of_lifecycle_scope : lifecycle_scope -> string
+
+module Lifecycle_scope : sig
+  type nonrec t = lifecycle_scope
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type lifecycle_scoped_relationship = {
+  spdx_id : iri;
+  creation_info : creation_info;
+  from_ : iri;
+  to_ : iri list;
+  relationship_type : relationship_type;
+  scope : lifecycle_scope option;
+}
+
+val create_lifecycle_scoped_relationship :
+  spdx_id:iri ->
+  creation_info:creation_info ->
+  from_:iri ->
+  to_:iri list ->
+  relationship_type:relationship_type ->
+  ?scope:lifecycle_scope ->
+  unit ->
+  lifecycle_scoped_relationship
+
+val lifecycle_scoped_relationship_of_yojson :
+  Yojson.Safe.t -> lifecycle_scoped_relationship
+
+val yojson_of_lifecycle_scoped_relationship :
+  lifecycle_scoped_relationship -> Yojson.Safe.t
+
+val lifecycle_scoped_relationship_of_json :
+  string -> lifecycle_scoped_relationship
+
+val json_of_lifecycle_scoped_relationship :
+  lifecycle_scoped_relationship -> string
+
+module Lifecycle_scoped_relationship : sig
+  type nonrec t = lifecycle_scoped_relationship
+
+  val create :
+    spdx_id:iri ->
+    creation_info:creation_info ->
+    from_:iri ->
+    to_:iri list ->
+    relationship_type:relationship_type ->
+    ?scope:lifecycle_scope ->
+    unit ->
+    t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+(** Heterogeneous list element for the SPDX 3.0 \@graph array. The adapter
+    ([Spdx_3_0_1_adapter]) reads/writes the ["type"] field of each JSON object
+    to route between variants, so the record types above do not carry a [type_]
+    field. *)
+type graph_element =
+  | SoftwareAgent of software_agent
+  | SpdxDocument of spdx_document
+  | Software_Package of software_package
+  | LifecycleScopedRelationship of lifecycle_scoped_relationship
+  | Relationship of relationship
+  | SimpleLicensing_LicenseExpression of simplelicensing_license_expression
+
+val graph_element_of_yojson : Yojson.Safe.t -> graph_element
+val yojson_of_graph_element : graph_element -> Yojson.Safe.t
+val graph_element_of_json : string -> graph_element
+val json_of_graph_element : graph_element -> string
+
+module Graph_element : sig
+  type nonrec t = graph_element
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type root_json = { context : string; graph : graph_element list }
+
+val create_root_json :
+  context:string -> graph:graph_element list -> unit -> root_json
+
+val root_json_of_yojson : Yojson.Safe.t -> root_json
+val yojson_of_root_json : root_json -> Yojson.Safe.t
+val root_json_of_json : string -> root_json
+val json_of_root_json : root_json -> string
+
+module Root_json : sig
+  type nonrec t = root_json
+
+  val create : context:string -> graph:graph_element list -> unit -> t
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end

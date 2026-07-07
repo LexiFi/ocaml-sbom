@@ -1,0 +1,10 @@
+; SPDX export
+(library
+  (name spdx)
+  (modules spdx_2_3_1_dev spdx_3_0_1 spdx_3_0_1_adapter spdx_export)
+  (libraries
+    sbom_types
+    unix
+    yojson
+  )
+)

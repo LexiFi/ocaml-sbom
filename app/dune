@@ -8,6 +8,7 @@
     fpath
     sbom_gen
     sbom_types
+    spdx
     yojson
   )
 )
