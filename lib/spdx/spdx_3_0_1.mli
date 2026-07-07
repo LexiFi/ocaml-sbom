@@ -55,28 +55,6 @@ module Creation_info : sig
   val to_json : t -> string
 end
 
-type tool = { spdx_id : iri; name : string; creation_info : creation_info }
-
-val create_tool :
-  spdx_id:iri -> name:string -> creation_info:creation_info -> unit -> tool
-
-val tool_of_yojson : Yojson.Safe.t -> tool
-val yojson_of_tool : tool -> Yojson.Safe.t
-val tool_of_json : string -> tool
-val json_of_tool : tool -> string
-
-module Tool : sig
-  type nonrec t = tool
-
-  val create :
-    spdx_id:iri -> name:string -> creation_info:creation_info -> unit -> t
-
-  val of_yojson : Yojson.Safe.t -> t
-  val to_yojson : t -> Yojson.Safe.t
-  val of_json : string -> t
-  val to_json : t -> string
-end
-
 type spdx_document = {
   spdx_id : iri;
   name : string;
@@ -156,6 +134,36 @@ module Software_package : sig
     ?description:string ->
     unit ->
     t
+
+  val of_yojson : Yojson.Safe.t -> t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_json : string -> t
+  val to_json : t -> string
+end
+
+type software_agent = {
+  spdx_id : iri;
+  name : string;
+  creation_info : creation_info;
+}
+
+val create_software_agent :
+  spdx_id:iri ->
+  name:string ->
+  creation_info:creation_info ->
+  unit ->
+  software_agent
+
+val software_agent_of_yojson : Yojson.Safe.t -> software_agent
+val yojson_of_software_agent : software_agent -> Yojson.Safe.t
+val software_agent_of_json : string -> software_agent
+val json_of_software_agent : software_agent -> string
+
+module Software_agent : sig
+  type nonrec t = software_agent
+
+  val create :
+    spdx_id:iri -> name:string -> creation_info:creation_info -> unit -> t
 
   val of_yojson : Yojson.Safe.t -> t
   val to_yojson : t -> Yojson.Safe.t
@@ -331,8 +339,8 @@ module Lifecycle_scoped_relationship : sig
 end
 
 type graph_element =
+  | SoftwareAgent of software_agent
   | SpdxDocument of spdx_document
-  | Tool of tool
   | Software_Package of software_package
   | LifecycleScopedRelationship of lifecycle_scoped_relationship
   | Relationship of relationship

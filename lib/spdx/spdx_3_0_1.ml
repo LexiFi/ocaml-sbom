@@ -185,64 +185,6 @@ module Creation_info = struct
   let to_json = json_of_creation_info
 end
 
-type tool = { spdx_id : iri; name : string; creation_info : creation_info }
-
-let create_tool ~spdx_id ~name ~creation_info () : tool =
-  { spdx_id; name; creation_info }
-
-let tool_of_yojson (x : Yojson.Safe.t) : tool =
-  match x with
-  | `Assoc fields ->
-      (* Duplicate JSON keys: behavior is unspecified (RFC 8259 §4 says keys SHOULD
-       be unique). Below the threshold, List.assoc_opt returns the first binding;
-       above it, the hashtable returns the last. *)
-      let assoc_ =
-        if Atdml_runtime.list_length_gt 5 fields then (
-          let tbl = Hashtbl.create 16 in
-          List.iter (fun (k, v) -> Hashtbl.add tbl k v) fields;
-          fun key -> Hashtbl.find_opt tbl key)
-        else fun key -> List.assoc_opt key fields
-      in
-      let spdx_id =
-        match assoc_ "spdxId" with
-        | Some v -> iri_of_yojson v
-        | None -> Atdml_runtime.Yojson.missing_field "tool" "spdxId"
-      in
-      let name =
-        match assoc_ "name" with
-        | Some v -> Atdml_runtime.Yojson.string_of_yojson v
-        | None -> Atdml_runtime.Yojson.missing_field "tool" "name"
-      in
-      let creation_info =
-        match assoc_ "creationInfo" with
-        | Some v -> creation_info_of_yojson v
-        | None -> Atdml_runtime.Yojson.missing_field "tool" "creationInfo"
-      in
-      { spdx_id; name; creation_info }
-  | _ -> Atdml_runtime.Yojson.bad_type "tool" x
-
-let yojson_of_tool (x : tool) : Yojson.Safe.t =
-  `Assoc
-    (List.concat
-       [
-         [ ("spdxId", yojson_of_iri x.spdx_id) ];
-         [ ("name", Atdml_runtime.Yojson.yojson_of_string x.name) ];
-         [ ("creationInfo", yojson_of_creation_info x.creation_info) ];
-       ])
-
-let tool_of_json s = tool_of_yojson (Yojson.Safe.from_string s)
-let json_of_tool x = Yojson.Safe.to_string (yojson_of_tool x)
-
-module Tool = struct
-  type nonrec t = tool
-
-  let create = create_tool
-  let of_yojson = tool_of_yojson
-  let to_yojson = yojson_of_tool
-  let of_json = tool_of_json
-  let to_json = json_of_tool
-end
-
 type spdx_document = {
   spdx_id : iri;
   name : string;
@@ -461,6 +403,72 @@ module Software_package = struct
   let to_yojson = yojson_of_software_package
   let of_json = software_package_of_json
   let to_json = json_of_software_package
+end
+
+type software_agent = {
+  spdx_id : iri;
+  name : string;
+  creation_info : creation_info;
+}
+
+let create_software_agent ~spdx_id ~name ~creation_info () : software_agent =
+  { spdx_id; name; creation_info }
+
+let software_agent_of_yojson (x : Yojson.Safe.t) : software_agent =
+  match x with
+  | `Assoc fields ->
+      (* Duplicate JSON keys: behavior is unspecified (RFC 8259 §4 says keys SHOULD
+       be unique). Below the threshold, List.assoc_opt returns the first binding;
+       above it, the hashtable returns the last. *)
+      let assoc_ =
+        if Atdml_runtime.list_length_gt 5 fields then (
+          let tbl = Hashtbl.create 16 in
+          List.iter (fun (k, v) -> Hashtbl.add tbl k v) fields;
+          fun key -> Hashtbl.find_opt tbl key)
+        else fun key -> List.assoc_opt key fields
+      in
+      let spdx_id =
+        match assoc_ "spdxId" with
+        | Some v -> iri_of_yojson v
+        | None -> Atdml_runtime.Yojson.missing_field "software_agent" "spdxId"
+      in
+      let name =
+        match assoc_ "name" with
+        | Some v -> Atdml_runtime.Yojson.string_of_yojson v
+        | None -> Atdml_runtime.Yojson.missing_field "software_agent" "name"
+      in
+      let creation_info =
+        match assoc_ "creationInfo" with
+        | Some v -> creation_info_of_yojson v
+        | None ->
+            Atdml_runtime.Yojson.missing_field "software_agent" "creationInfo"
+      in
+      { spdx_id; name; creation_info }
+  | _ -> Atdml_runtime.Yojson.bad_type "software_agent" x
+
+let yojson_of_software_agent (x : software_agent) : Yojson.Safe.t =
+  `Assoc
+    (List.concat
+       [
+         [ ("spdxId", yojson_of_iri x.spdx_id) ];
+         [ ("name", Atdml_runtime.Yojson.yojson_of_string x.name) ];
+         [ ("creationInfo", yojson_of_creation_info x.creation_info) ];
+       ])
+
+let software_agent_of_json s =
+  software_agent_of_yojson (Yojson.Safe.from_string s)
+
+let json_of_software_agent x =
+  Yojson.Safe.to_string (yojson_of_software_agent x)
+
+module Software_agent = struct
+  type nonrec t = software_agent
+
+  let create = create_software_agent
+  let of_yojson = software_agent_of_yojson
+  let to_yojson = yojson_of_software_agent
+  let of_json = software_agent_of_json
+  let to_json = json_of_software_agent
 end
 
 type simplelicensing_license_expression = {
@@ -798,8 +806,8 @@ module Lifecycle_scoped_relationship = struct
 end
 
 type graph_element =
+  | SoftwareAgent of software_agent
   | SpdxDocument of spdx_document
-  | Tool of tool
   | Software_Package of software_package
   | LifecycleScopedRelationship of lifecycle_scoped_relationship
   | Relationship of relationship
@@ -808,9 +816,10 @@ type graph_element =
 let graph_element_of_yojson (x : Yojson.Safe.t) : graph_element =
   let x = Spdx_3_0_1_adapter.normalize x in
   match x with
+  | `List [ `String "SoftwareAgent"; v ] ->
+      SoftwareAgent (software_agent_of_yojson v)
   | `List [ `String "SpdxDocument"; v ] ->
       SpdxDocument (spdx_document_of_yojson v)
-  | `List [ `String "Tool"; v ] -> Tool (tool_of_yojson v)
   | `List [ `String "software_Package"; v ] ->
       Software_Package (software_package_of_yojson v)
   | `List [ `String "LifecycleScopedRelationship"; v ] ->
@@ -825,9 +834,10 @@ let graph_element_of_yojson (x : Yojson.Safe.t) : graph_element =
 let yojson_of_graph_element (x : graph_element) : Yojson.Safe.t =
   let atdml_result_ =
     match x with
+    | SoftwareAgent v ->
+        `List [ `String "SoftwareAgent"; yojson_of_software_agent v ]
     | SpdxDocument v ->
         `List [ `String "SpdxDocument"; yojson_of_spdx_document v ]
-    | Tool v -> `List [ `String "Tool"; yojson_of_tool v ]
     | Software_Package v ->
         `List [ `String "software_Package"; yojson_of_software_package v ]
     | LifecycleScopedRelationship v ->

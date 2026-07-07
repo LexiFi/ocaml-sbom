@@ -181,12 +181,19 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
     T.create_iri (ns_base ^ "#" ^ sanitize_for_id (p :> string))
   in
   let dep_rel_id i = T.create_iri (Printf.sprintf "%s#rel-%d" ns_base i) in
+  (* creationInfo is embedded inline in each element (the schema forbids a
+     standalone CreationInfo with spdxId). createdBy references the SoftwareAgent
+     by IRI; SoftwareAgent extends Agent so the validator accepts it. *)
   let creation_info =
     T.create_creation_info ~type_:"CreationInfo" ~spec_version:"3.0.1"
       ~created:ts ~created_by:[ tool_id ] ()
   in
+  (* SoftwareAgent is placed first so the pre-pass indexes it before any
+     element's inline creationInfo tries to resolve the createdBy IRI. *)
   let tool =
-    T.Tool (T.create_tool ~spdx_id:tool_id ~name:"ocaml-sbom" ~creation_info ())
+    T.SoftwareAgent
+      (T.create_software_agent ~spdx_id:tool_id ~name:"ocaml-sbom"
+         ~creation_info ())
   in
   (* Build license expression elements.
      Each unique license string becomes one simplelicensing_LicenseExpression
@@ -296,8 +303,8 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
          ~root_element:(List.map spdx_id_of_purl doc.root_components)
          ())
   in
-  T.create_root_json ~context:"https://spdx.github.io/spdx-3-model/context.json"
+  T.create_root_json ~context:"https://spdx.org/rdf/3.0.1/spdx-context.jsonld"
     ~graph:
-      ([ spdx_doc; tool ] @ packages @ dep_relationships @ lic_elements
+      ([ tool; spdx_doc ] @ packages @ dep_relationships @ lic_elements
      @ lic_relationships)
     ()
