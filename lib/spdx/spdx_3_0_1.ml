@@ -1,6 +1,11 @@
 (* Auto-generated from "spdx_3_0_1.atd" by atdml. *)
 [@@@ocaml.warning "-27-32-33-35-39"]
 
+(** Hand-crafted well-typed subset of the SPDX 3.0.1 schema. Only covers the
+    element types emitted by our SBOM export. See also: spdx_3_0_1.generated.atd
+    (full generated schema, for reference). Spec:
+    https://spdx.github.io/spdx-3-model/ *)
+
 (* Inlined runtime — no external dependency needed. *)
 module Atdml_runtime = struct
   (* Returns true iff the list has strictly more than [n] elements,
@@ -114,6 +119,10 @@ type creation_info = {
   created : string;  (** ISO 8601 UTC timestamp. *)
   created_by : iri list;
 }
+(** Embedded inline in every SPDX 3.0 element. Must NOT appear as a separate
+    \@graph element with its own spdxId — the schema forbids it. The "type"
+    field is required by the JSON-LD context to identify this object as a
+    CreationInfo. *)
 
 let create_creation_info ~type_ ~spec_version ~created ~created_by () :
     creation_info =
@@ -718,6 +727,8 @@ type lifecycle_scoped_relationship = {
   relationship_type : relationship_type;
   scope : lifecycle_scope option;
 }
+(** from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
+    keywords; <json name="..."> maps them to the correct JSON field names. *)
 
 let create_lifecycle_scoped_relationship ~spdx_id ~creation_info ~from_ ~to_
     ~relationship_type ?scope () : lifecycle_scoped_relationship =

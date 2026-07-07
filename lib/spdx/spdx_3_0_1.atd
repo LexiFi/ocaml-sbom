@@ -1,16 +1,14 @@
-(* Hand-crafted well-typed subset of the SPDX 3.0.1 schema.
-   Only covers the element types emitted by our SBOM export.
-   The full generated schema is preserved in spdx_3_0_1.generated.atd for reference.
-
-   Spec: https://spdx.github.io/spdx-3-model/
-*)
+<doc text="Hand-crafted well-typed subset of the SPDX 3.0.1 schema.
+Only covers the element types emitted by our SBOM export.
+See also: spdx_3_0_1.generated.atd (full generated schema, for reference).
+Spec: https://spdx.github.io/spdx-3-model/">
 
 type iri <doc text="An IRI — just a string in practice."> = string
 
-(* Embedded inline in every SPDX 3.0 element. Must NOT appear as a separate
-   @graph element with its own spdxId — the schema forbids it. The "type" field
-   is required by the JSON-LD context to identify this object as a CreationInfo. *)
-type creation_info = {
+type creation_info
+  <doc text="Embedded inline in every SPDX 3.0 element.
+Must NOT appear as a separate @graph element with its own spdxId — the schema forbids it.
+The \"type\" field is required by the JSON-LD context to identify this object as a CreationInfo."> = {
   type_ <json name="type"> <doc text="Always \"CreationInfo\"."> : string;
   spec_version <json name="specVersion"> : string;
   created <doc text="ISO 8601 UTC timestamp."> : string;
@@ -78,9 +76,9 @@ type relationship
   relationship_type <json name="relationshipType"> : relationship_type;
 }
 
-(* from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
-   keywords; <json name="..."> maps them to the correct JSON field names. *)
-type lifecycle_scoped_relationship = {
+type lifecycle_scoped_relationship
+  <doc text="from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
+keywords; <json name=\"...\"> maps them to the correct JSON field names."> = {
   spdx_id <json name="spdxId"> : iri;
   creation_info <json name="creationInfo"> : creation_info;
   from_ <json name="from"> : iri;

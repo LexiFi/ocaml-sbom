@@ -1,5 +1,10 @@
 (* Auto-generated from "spdx_3_0_1.atd" by atdml. *)
 
+(** Hand-crafted well-typed subset of the SPDX 3.0.1 schema. Only covers the
+    element types emitted by our SBOM export. See also: spdx_3_0_1.generated.atd
+    (full generated schema, for reference). Spec:
+    https://spdx.github.io/spdx-3-model/ *)
+
 type iri = private string
 (** An IRI — just a string in practice. *)
 
@@ -25,6 +30,10 @@ type creation_info = {
   created : string;  (** ISO 8601 UTC timestamp. *)
   created_by : iri list;
 }
+(** Embedded inline in every SPDX 3.0 element. Must NOT appear as a separate
+    \@graph element with its own spdxId — the schema forbids it. The "type"
+    field is required by the JSON-LD context to identify this object as a
+    CreationInfo. *)
 
 val create_creation_info :
   type_:string ->
@@ -306,6 +315,8 @@ type lifecycle_scoped_relationship = {
   relationship_type : relationship_type;
   scope : lifecycle_scope option;
 }
+(** from_ and to_ use trailing underscores because 'from' and 'to' are OCaml
+    keywords; <json name="..."> maps them to the correct JSON field names. *)
 
 val create_lifecycle_scoped_relationship :
   spdx_id:iri ->
