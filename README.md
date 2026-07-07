@@ -18,7 +18,7 @@ manager.
 ## Installation
 
 [Opam](https://opam.ocaml.org/) is required to build `ocaml-sbom` from
-source. Build it and install it with
+source. Build it and install it with (TODO)
 
 ```
 $ opam install ocaml-sbom
@@ -32,10 +32,11 @@ Lockfiles may be present. They have the `.opam.locked` extension and
 are picked up automatically by `ocaml-sbom`. The tool provides options
 to require or to ignore lockfiles, see `ocaml-sbom --help`.
 
-Basic usage is:
+First, generate the SBOM in ocaml-sbom's internal format. This may
+take a few minutes:
 
 ```
-$ ocaml-sbom -o myproject.ocaml-sbom
+$ ocaml-sbom -o myproject.ocaml-sbom --verbose
 ```
 
 An overlay file named `ocaml-sbom.overlay.json` is used if present.
