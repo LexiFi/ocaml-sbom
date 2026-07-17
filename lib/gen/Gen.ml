@@ -163,6 +163,9 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   let opamfiles =
     List.concat_map Sbom_deps.Opam_resolve.find_opamfiles project_roots
   in
+  if opamfiles = [] then
+    ksprintf failwith "no opam file (*.opam or 'opam') found in %s"
+      (String.concat ", " (List.map (fun p -> !!p) project_roots));
   let deps, package_info, warnings =
     Sbom_deps.Opam_resolve.resolve_dependencies ?use_lockfiles ~opamfiles ()
   in
