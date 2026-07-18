@@ -1,3 +1,7 @@
+(*
+   Generate an SBOM in the internal format.
+*)
+
 open Printf
 module S = Sbom_types.Ocaml_sbom
 
@@ -208,4 +212,7 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   | None -> print_endline json_str
   | Some path ->
       Out_channel.with_open_text !!path (fun oc -> fprintf oc "%s\n" json_str));
-  warnings
+  let project_tree_warnings =
+    Check_project.scan ~roots:project_roots document
+  in
+  warnings @ project_tree_warnings
