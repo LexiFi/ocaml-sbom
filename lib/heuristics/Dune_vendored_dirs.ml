@@ -31,5 +31,5 @@ let extract_vendored_dirs_from_dune_file (file : Scan_file_tree.file) =
             let dir_names = find_vendored_dirs sexps in
             if dir_names = [] then None
             else
-              let dir_parent = Fpath.parent file.path in
+              let dir_parent = Fpath.parent file.proj_path in
               Some (List.map (fun name -> Fpath.(dir_parent / name)) dir_names))

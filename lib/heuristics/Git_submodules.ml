@@ -6,12 +6,14 @@
 open Sbom_util.Path.Ops
 
 type git_submodule = {
-  path : Fpath.t;
-      (* in the final result returned by 'scan',
-                     holds the full fs path *)
+  root : Fpath.t option;
+  proj_path : Fpath.t;
   url : string;
   repo_name : string;
 }
+
+(* as parsed from .gitmodules *)
+type orig_git_submodule = { path : Fpath.t; url : string; repo_name : string }
 
 let repo_name_of_url url =
   let base = Filename.basename url in
@@ -27,8 +29,10 @@ let parse_gitmodules content =
   let flush () =
     match (!cur_path, !cur_url) with
     | Some p, Some u ->
-        subs :=
-          { path = Fpath.v p; url = u; repo_name = repo_name_of_url u } :: !subs;
+        let sub : orig_git_submodule =
+          { path = Fpath.v p; url = u; repo_name = repo_name_of_url u }
+        in
+        subs := sub :: !subs;
         cur_path := None;
         cur_url := None
     | _ -> ()
@@ -49,14 +53,20 @@ let parse_gitmodules content =
   flush ();
   List.rev !subs
 
-let rec scan ~(root : Fpath.t option) =
-  let gitmodules = root /? ".gitmodules" in
-  if Sys.file_exists !!gitmodules then
-    let contents = Sbom_util.File.read gitmodules in
-    let subs = parse_gitmodules contents in
-    subs
-    |> List.concat_map (fun sub ->
-        let rooted_path = root //? sub.path in
-        let sub = { sub with path = rooted_path } in
-        sub :: scan ~root:(Some rooted_path))
-  else []
+let scan ~(root : Fpath.t option) =
+  let rec scan fs_root proj_root =
+    let gitmodules = fs_root /? ".gitmodules" in
+    if Sys.file_exists !!gitmodules then
+      let contents = Sbom_util.File.read gitmodules in
+      let subs = parse_gitmodules contents in
+      subs
+      |> List.concat_map (fun (sub : orig_git_submodule) ->
+          let fs_path = fs_root //? sub.path in
+          let proj_path = proj_root //? sub.path in
+          let res : git_submodule =
+            { root; proj_path; url = sub.url; repo_name = sub.repo_name }
+          in
+          res :: scan (Some fs_path) (Some proj_path))
+    else []
+  in
+  scan root None

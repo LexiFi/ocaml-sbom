@@ -2,7 +2,10 @@
     submodule. *)
 
 type git_submodule = {
-  path : Fpath.t;  (** local path, may not match the name found in the URL *)
+  root : Fpath.t option;  (** project root *)
+  proj_path : Fpath.t;
+      (** local path relative to the project root, may not match the name found
+          in the URL *)
   url : string;  (** "https://example.com/proj.git" *)
   repo_name : string;  (** extracted from the URL: "proj" *)
 }

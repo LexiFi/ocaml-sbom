@@ -15,7 +15,7 @@ let common_vendor_parent_names =
 let is_likely_vendored_dir (file : Scan_file_tree.file) =
   match file.kind with
   | Dir ->
-      let parent_name = Fpath.(basename (parent file.path)) in
+      let parent_name = Fpath.(basename (parent file.proj_path)) in
       List.mem parent_name common_vendor_parent_names
   | Reg _
   | Other ->

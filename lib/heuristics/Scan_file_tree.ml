@@ -5,41 +5,34 @@
 open Sbom_util.Path.Ops
 
 type kind = Reg of string Lazy.t | Dir | Other
-type file = { name : string; path : Fpath.t; kind : kind }
+
+type file = {
+  name : string;
+  proj_path : Fpath.t; (* relative to the project root *)
+  kind : kind;
+}
 
 let scan ?(exclude_dir_names = []) ~root func =
-  let rec loop abs_dir (rel_dir : Fpath.t option) =
+  let rec loop fs_dir (proj_dir : Fpath.t option) =
     let entries =
-      try Array.to_list (Sys.readdir !!abs_dir) with
+      try Array.to_list (Sys.readdir !!fs_dir) with
       | Sys_error _ -> []
     in
     List.sort String.compare entries
     |> List.iter (fun name ->
-        let child_rel = rel_dir /? name in
-        let child_abs = abs_dir / name in
-        match Unix.lstat !!child_abs with
+        let proj_child = proj_dir /? name in
+        let fs_child = fs_dir / name in
+        match Unix.lstat !!fs_child with
         | exception Unix.Unix_error _ -> ()
         | stat -> (
-            match stat.Unix.st_kind with
-            | Unix.S_REG ->
-                let abs_path = !!child_abs in
-                let content =
-                  lazy
-                    (let ic = open_in abs_path in
-                     let n = in_channel_length ic in
-                     let s = Bytes.create n in
-                     really_input ic s 0 n;
-                     close_in ic;
-                     Bytes.to_string s)
-                in
-                func { name; path = child_rel; kind = Reg content }
-            | Unix.S_DIR ->
-                if not (List.mem name exclude_dir_names) then begin
-                  let dir_rel = Fpath.to_dir_path child_rel in
-                  let dir_abs = Fpath.to_dir_path child_abs in
-                  func { name; path = dir_rel; kind = Dir };
-                  loop dir_abs (Some dir_rel)
-                end
-            | _ -> func { name; path = child_rel; kind = Other }))
+            match stat.st_kind with
+            | S_REG ->
+                let contents = lazy (Sbom_util.File.read fs_child) in
+                func { name; proj_path = proj_child; kind = Reg contents }
+            | S_DIR ->
+                if not (List.mem name exclude_dir_names) then (
+                  func { name; proj_path = proj_child; kind = Dir };
+                  loop fs_child (Some proj_child))
+            | _ -> func { name; proj_path = proj_child; kind = Other }))
   in
   loop root None

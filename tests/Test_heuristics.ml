@@ -33,10 +33,11 @@ let test_license_file_detection =
   Testo.create "license_files detects LICENSE variants" (fun () ->
       let make_reg name =
         Sbom_heuristics.Scan_file_tree.
-          { name; path = Fpath.v name; kind = Reg (lazy "") }
+          { name; proj_path = Fpath.v name; kind = Reg (lazy "") }
       in
       let make_dir name =
-        Sbom_heuristics.Scan_file_tree.{ name; path = Fpath.v name; kind = Dir }
+        Sbom_heuristics.Scan_file_tree.
+          { name; proj_path = Fpath.v name; kind = Dir }
       in
       let is = Sbom_heuristics.License_files.is_likely_license_file in
       assert (is (make_reg "LICENSE"));
@@ -53,7 +54,8 @@ let test_vendored_dir_detection =
   Testo.create "vendored_dirs detects vendor children" (fun () ->
       let make_dir path =
         let name = Fpath.basename (Fpath.v path) in
-        Sbom_heuristics.Scan_file_tree.{ name; path = Fpath.v path; kind = Dir }
+        Sbom_heuristics.Scan_file_tree.
+          { name; proj_path = Fpath.v path; kind = Dir }
       in
       let is = Sbom_heuristics.Vendored_dirs.is_likely_vendored_dir in
       assert (is (make_dir "vendor/mylib"));
@@ -71,7 +73,7 @@ let test_dune_vendored_dirs =
         Sbom_heuristics.Scan_file_tree.
           {
             name = "dune";
-            path = Fpath.v "subdir" / "dune";
+            proj_path = Fpath.v "subdir" / "dune";
             kind = Reg (lazy content);
           }
       in
@@ -92,7 +94,7 @@ let test_dune_vendored_dirs_non_dune =
         Sbom_heuristics.Scan_file_tree.
           {
             name = "dune-project";
-            path = Fpath.v "dune-project";
+            proj_path = Fpath.v "dune-project";
             kind = Reg (lazy "(vendored_dirs vendor)");
           }
       in
@@ -110,8 +112,8 @@ let test_git_submodules =
       | [] -> Testo.fail "expected at least one submodule"
       | sub :: _ ->
           Testo.(check fpath)
-            (test_repo / "submodules" / "submodproject")
-            sub.path;
+            (Fpath.v "submodules" / "submodproject")
+            sub.proj_path;
           Testo.(check string) "submodproject" sub.repo_name)
 
 let test_check_project =

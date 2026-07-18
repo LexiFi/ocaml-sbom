@@ -4,8 +4,9 @@ type kind = Reg of string Lazy.t | Dir | Other
 
 type file = {
   name : string;
-  path : Fpath.t;
-      (** Path relative to the root (not a valid file system path in general) *)
+  proj_path : Fpath.t;
+      (** Path relative to the project root (not a valid file system path in
+          general) *)
   kind : kind;
 }
 
