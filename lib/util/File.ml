@@ -1,7 +1,6 @@
 (* File manipulation utilities *)
 
-let ( / ) = Fpath.( / )
-let ( !! ) = Fpath.to_string
+open Path.Ops
 
 let read path =
   let ic = open_in !!path in
