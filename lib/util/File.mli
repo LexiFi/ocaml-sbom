@@ -12,3 +12,6 @@ val with_temp_dir :
 val with_temp_file :
   ?prefix:string -> ?suffix:string -> (Fpath.t -> out_channel -> 'a) -> 'a
 (** Create a temporary file and remove it when done. *)
+
+val read : Fpath.t -> string
+(** Read the contents of a text file. Raises exceptions *)

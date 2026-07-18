@@ -3,12 +3,11 @@
 *)
 
 open Printf
+open Sbom_util.Path.Ops
 module S = Sbom_types.Ocaml_sbom
 
-let ( !! ) = Fpath.to_string
 let common_format_version = "1.0"
 let ocaml_sbom_format = "ocaml-sbom/" ^ common_format_version
-let _overlay_format = "ocaml-sbom-overlay/" ^ common_format_version
 
 let list_scopes (scopes : Sbom_deps.Dep.scopes) : S.dep_scope list =
   let res = ref [] in
@@ -169,7 +168,9 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   in
   if opamfiles = [] then
     ksprintf failwith "no opam file (*.opam or 'opam') found in %s"
-      (String.concat ", " (List.map (fun p -> !!p) project_roots));
+      (project_roots
+      |> List.map (fun p -> !!(Sbom_util.Path.of_root p))
+      |> String.concat ", ");
   let deps, package_info, warnings =
     Sbom_deps.Opam_resolve.resolve_dependencies ?use_lockfiles ~opamfiles ()
   in

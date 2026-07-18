@@ -11,12 +11,16 @@
 ; Build the test executable like an ordinary OCaml executable
 (executable
  (name test)
- (modules test test_overlay)
+ (modules test test_overlay test_heuristics)
  (libraries
    testo
    unix
    sbom_gen
+   sbom_heuristics
    sbom_util
    sbom_types
  )
 )
+
+; We don't need to build this fake project
+(data_only_dirs test-repo)

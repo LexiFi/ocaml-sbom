@@ -4,5 +4,9 @@
   (name sbom_heuristics)
   (libraries
     fpath
+    parsexp
+    sexplib0
+    unix
+    sbom_util
   )
 )

@@ -1,9 +1,18 @@
 (* File manipulation utilities *)
 
 let ( / ) = Fpath.( / )
+let ( !! ) = Fpath.to_string
+
+let read path =
+  let ic = open_in !!path in
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr ic)
+    (fun () ->
+      let n = in_channel_length ic in
+      really_input_string ic n)
 
 let rec rm_recursive path =
-  let path_str = Fpath.to_string path in
+  let path_str = !!path in
   match (Unix.lstat path_str).st_kind with
   | S_DIR ->
       Sys.readdir path_str

@@ -25,7 +25,7 @@ type use_lockfiles =
   | Require_lockfiles
   | Ignore_lockfiles
 
-val find_opamfiles : Fpath.t -> Fpath.t list
+val find_opamfiles : Fpath.t option -> Fpath.t list
 (** Take the project root dir and look for opam files *)
 
 val resolve_dependencies :

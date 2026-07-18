@@ -9,6 +9,7 @@
     yojson
 
     sbom_deps
+    sbom_heuristics
     sbom_types
     spdx_licenses
   )

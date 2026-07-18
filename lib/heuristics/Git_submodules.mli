@@ -7,5 +7,5 @@ type git_submodule = {
   repo_name : string;  (** extracted from the URL: "proj" *)
 }
 
-val scan : root:Fpath.t -> git_submodule list
+val scan : root:Fpath.t option -> git_submodule list
 (** Scan recursively for Git submodules starting from a [root] folder. *)
