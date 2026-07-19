@@ -15,11 +15,8 @@ let component_json key name =
       "name": "%s",
       "version": "%s",
       "kind": { "Opam_package": "Unknown" },
-      "authors": [],
-      "maintainers": [],
       "licensing": { "declared": "Unknown", "concluded": "Unknown" },
-      "tags": [],
-      "source_distribution": { "url": "", "checksums": [] }
+      "source_distribution": {}
     }|}
     key name (version_of_purl key)
 
