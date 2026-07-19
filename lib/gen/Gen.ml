@@ -147,7 +147,9 @@ let make_component
     ?description ?homepage_url ?doc_url ?bug_reports_url ?dev_repo_url
     ~source_distribution ()
 
-let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
+let generate_sbom ?(ignore_all_suspected_components = false)
+    ?(ignored_suspected_component_paths = []) ?output_file ?overlay_file
+    ?use_lockfiles ~project_roots () =
   (* Resolve overlay file: use the explicit path if given, otherwise look for
      the default file name in the current directory. *)
   let effective_overlay_file =
@@ -214,6 +216,9 @@ let generate_sbom ?output_file ?overlay_file ?use_lockfiles ~project_roots () =
   | Some path ->
       Out_channel.with_open_text !!path (fun oc -> fprintf oc "%s\n" json_str));
   let project_tree_warnings =
-    Check_project.scan ~roots:project_roots document
+    if ignore_all_suspected_components then []
+    else
+      Check_project.scan ~ignored_paths:ignored_suspected_component_paths
+        ~roots:project_roots document
   in
   warnings @ project_tree_warnings

@@ -4,6 +4,7 @@ type kind = Reg of string Lazy.t | Dir | Other
 
 type file = {
   name : string;
+  root : Fpath.t option;
   proj_path : Fpath.t;
       (** Path relative to the project root (not a valid file system path in
           general) *)
@@ -11,6 +12,9 @@ type file = {
 }
 
 val scan :
-  ?exclude_dir_names:string list -> root:Fpath.t -> (file -> unit) -> unit
+  ?exclude_dir_names:string list ->
+  root:Fpath.t option ->
+  (file -> unit) ->
+  unit
 (** Scan all the regular files and directories starting from the root folder
     (excluded). Symlinks are ignored. *)

@@ -7,6 +7,7 @@
 open Sbom_util.Path.Ops
 
 let test_repo = Fpath.v "tests" / "test-repo"
+let test_root = Some test_repo
 
 (* for use by Testo.check *)
 let fpath = Testo.testable Fpath.to_string Fpath.equal
@@ -19,7 +20,7 @@ let empty_sbom () : Sbom_types.Ocaml_sbom.document =
 let test_scan_file_tree =
   Testo.create "scan_file_tree finds files and dirs" (fun () ->
       let found = ref [] in
-      Sbom_heuristics.Scan_file_tree.scan ~root:test_repo (fun file ->
+      Sbom_heuristics.Scan_file_tree.scan ~root:test_root (fun file ->
           found := file.name :: !found);
       let found = List.sort String.compare !found in
       (* Test repo contains these files/dirs *)
@@ -31,13 +32,14 @@ let test_scan_file_tree =
 
 let test_license_file_detection =
   Testo.create "license_files detects LICENSE variants" (fun () ->
+      let root = test_root in
       let make_reg name =
         Sbom_heuristics.Scan_file_tree.
-          { name; proj_path = Fpath.v name; kind = Reg (lazy "") }
+          { name; root; proj_path = Fpath.v name; kind = Reg (lazy "") }
       in
       let make_dir name =
         Sbom_heuristics.Scan_file_tree.
-          { name; proj_path = Fpath.v name; kind = Dir }
+          { name; root; proj_path = Fpath.v name; kind = Dir }
       in
       let is = Sbom_heuristics.License_files.is_likely_license_file in
       assert (is (make_reg "LICENSE"));
@@ -55,7 +57,7 @@ let test_vendored_dir_detection =
       let make_dir path =
         let name = Fpath.basename (Fpath.v path) in
         Sbom_heuristics.Scan_file_tree.
-          { name; proj_path = Fpath.v path; kind = Dir }
+          { name; root = test_root; proj_path = Fpath.v path; kind = Dir }
       in
       let is = Sbom_heuristics.Vendored_dirs.is_likely_vendored_dir in
       assert (is (make_dir "vendor/mylib"));
@@ -73,6 +75,7 @@ let test_dune_vendored_dirs =
         Sbom_heuristics.Scan_file_tree.
           {
             name = "dune";
+            root = test_root;
             proj_path = Fpath.v "subdir" / "dune";
             kind = Reg (lazy content);
           }
@@ -94,6 +97,7 @@ let test_dune_vendored_dirs_non_dune =
         Sbom_heuristics.Scan_file_tree.
           {
             name = "dune-project";
+            root = test_root;
             proj_path = Fpath.v "dune-project";
             kind = Reg (lazy "(vendored_dirs vendor)");
           }
@@ -107,7 +111,7 @@ let test_dune_vendored_dirs_non_dune =
 
 let test_git_submodules =
   Testo.create "git_submodules scans .gitmodules" (fun () ->
-      let subs = Sbom_heuristics.Git_submodules.scan ~root:(Some test_repo) in
+      let subs = Sbom_heuristics.Git_submodules.scan ~root:test_root in
       match subs with
       | [] -> Testo.fail "expected at least one submodule"
       | sub :: _ ->
@@ -119,7 +123,7 @@ let test_git_submodules =
 let test_check_project =
   Testo.create "check_project finds suspected components" (fun () ->
       let warnings =
-        Sbom_gen.Check_project.scan ~roots:[ Some test_repo ] (empty_sbom ())
+        Sbom_gen.Check_project.scan ~roots:[ test_root ] (empty_sbom ())
       in
       if warnings = [] then
         Testo.fail "expected heuristics to produce at least one warning";

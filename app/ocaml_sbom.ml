@@ -37,13 +37,19 @@ module Gen = struct
     output_file : Fpath.t option;
     overlay_file : Fpath.t option; (* must exist if provided *)
     use_lockfiles : Sbom_deps.Opam_resolve.use_lockfiles;
+    tolerate_warnings : bool;
+    ignore_all_suspected_components : bool;
+    ignored_suspected_component_paths : Fpath.t list; (* as given by the user *)
     verbose : bool;
   }
 
   let run (conf : conf) =
     Sbom_util.Global.verbose := conf.verbose;
     match
-      Sbom_gen.Gen.generate_sbom ?output_file:conf.output_file
+      Sbom_gen.Gen.generate_sbom
+        ~ignore_all_suspected_components:conf.ignore_all_suspected_components
+        ~ignored_suspected_component_paths:
+          conf.ignored_suspected_component_paths ?output_file:conf.output_file
         ?overlay_file:conf.overlay_file ~use_lockfiles:conf.use_lockfiles
         ~project_roots:conf.project_roots ()
     with
@@ -57,9 +63,9 @@ module Gen = struct
         flush stderr;
         exit 1
     | warnings ->
-        List.iter (fun w -> eprintf "Warning: %s\n" w) warnings;
+        List.iter (fun w -> eprintf "*** Warning: %s\n" w) warnings;
         flush stderr;
-        if warnings <> [] then exit 1
+        if warnings <> [] && not conf.tolerate_warnings then exit 1
 
   (* We represent the default project root as 'None' rather than "."
      so as to avoid ending up with spurious leading './' in file paths.
@@ -107,20 +113,60 @@ module Gen = struct
     in
     Arg.value (Arg.opt conv Use_lockfiles_if_available info)
 
+  let tolerate_warnings_term : bool Term.t =
+    let info =
+      Arg.info [ "tolerate-warnings" ]
+        ~doc:
+          "Do not exit with a nonzero status when warnings are emitted. By \
+           default, any warning causes a nonzero exit code."
+    in
+    Arg.value (Arg.flag info)
+
+  let ignore_all_suspected_components_term : bool Term.t =
+    let info =
+      Arg.info
+        [ "ignore-all-suspected-components" ]
+        ~doc:
+          "Skip all checks that produce warnings about suspected unlisted \
+           components. Overrides any $(b,--ignore-suspected-component) flags."
+    in
+    Arg.value (Arg.flag info)
+
+  let ignored_suspected_component_paths_term : string list Term.t =
+    let info =
+      Arg.info
+        [ "ignore-suspected-component" ]
+        ~docv:"PATH"
+        ~doc:
+          "Suppress the warning for the suspected unlisted component at \
+           $(docv). The path must exist on disk and is resolved to an absolute \
+           path via $(b,realpath) before comparison. May be repeated to ignore \
+           multiple components."
+    in
+    Arg.value (Arg.opt_all Arg.file [] info)
+
   let cmd_term =
-    let combine project_roots output_file overlay_file use_lockfiles verbose =
+    let combine ignore_all_suspected_components
+        ignored_suspected_component_paths output_file overlay_file project_roots
+        use_lockfiles tolerate_warnings verbose =
       run
         {
+          ignore_all_suspected_components;
+          ignored_suspected_component_paths =
+            List.map Fpath.v ignored_suspected_component_paths;
           project_roots = List.map (Option.map Fpath.v) project_roots;
           output_file = Option.map Fpath.v output_file;
           overlay_file = Option.map Fpath.v overlay_file;
           use_lockfiles;
+          tolerate_warnings;
           verbose;
         }
     in
     Term.(
-      const combine $ project_roots_term $ output_file_term $ overlay_file_term
-      $ use_lockfiles_term $ verbose_term)
+      const combine $ ignore_all_suspected_components_term
+      $ ignored_suspected_component_paths_term $ output_file_term
+      $ overlay_file_term $ project_roots_term $ use_lockfiles_term
+      $ tolerate_warnings_term $ verbose_term)
 
   let doc = "generate an SBOM for a Dune project"
 
