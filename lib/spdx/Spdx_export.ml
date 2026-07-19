@@ -61,14 +61,6 @@ let known_license_str_noassertion (k : S.license_expr S.known) =
   | Some s -> s
   | None -> "NOASSERTION"
 
-(* SPDX's downloadLocation must be NONE, NOASSERTION, or a URL matching a
-   strict pattern that excludes file:// paths. Return None for URLs we cannot
-   use, so callers can substitute NOASSERTION or omit the field. *)
-let spdx_download_url (url : string) : string option =
-  if url = "" || (String.length url >= 7 && String.sub url 0 7 = "file://") then
-    None
-  else Some url
-
 let doc_name (doc : S.document) =
   match doc.components with
   | [] -> "SBOM"
@@ -106,9 +98,7 @@ let component_to_package (c : S.component) : P.sPDX231devPackages =
              cs)
   in
   let download_location =
-    Option.value
-      (spdx_download_url c.source_distribution.url)
-      ~default:"NOASSERTION"
+    Option.value c.source_distribution.url ~default:"NOASSERTION"
   in
   let external_refs =
     Some
@@ -273,8 +263,7 @@ let to_spdx_3_0 (doc : S.document) : T.root_json =
           (T.create_software_package ~spdx_id:(spdx_id_of_purl c.key)
              ~name:c.name ~creation_info ~software_package_version:c.version
              ~software_package_url:(T.create_iri (c.key :> string))
-             ?software_download_location:
-               (spdx_download_url c.source_distribution.url)
+             ?software_download_location:c.source_distribution.url
              ?description:c.description ()))
       doc.components
   in

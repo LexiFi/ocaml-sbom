@@ -84,12 +84,13 @@ let opt_ext_ref (url : string option) (type_ : C.externalReferenceType) :
 let external_refs_of_component (c : S.component) : C.externalReference list =
   let sd = c.source_distribution in
   let src_ref =
-    if sd.url = "" then None
-    else
-      let hashes = List.map checksum_to_cdx sd.checksums in
-      Some
-        (C.create_externalReference ~url:(C.String sd.url)
-           ~type_:C.Sourcedistribution ~hashes ())
+    match sd.url with
+    | None -> None
+    | Some url ->
+        let hashes = List.map checksum_to_cdx sd.checksums in
+        Some
+          (C.create_externalReference ~url:(C.String url)
+             ~type_:C.Sourcedistribution ~hashes ())
   in
   List.filter_map Fun.id
     [
