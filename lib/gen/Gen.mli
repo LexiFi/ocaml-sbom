@@ -1,6 +1,8 @@
 (** Entry point for generating an SBOM *)
 
 val generate_sbom :
+  ?ignore_all_suspected_components:bool ->
+  ?ignored_suspected_component_paths:Fpath.t list ->
   ?output_file:Fpath.t ->
   ?overlay_file:Fpath.t ->
   ?use_lockfiles:Sbom_deps.Opam_resolve.use_lockfiles ->

@@ -3,6 +3,7 @@
     https://dune.readthedocs.io/en/stable/reference/dune/vendored_dirs.html *)
 
 open Sexplib0.Sexp
+open Sbom_util.Path.Ops
 
 let find_vendored_dirs sexps =
   List.concat_map
@@ -29,7 +30,11 @@ let extract_vendored_dirs_from_dune_file (file : Scan_file_tree.file) =
         | Error _ -> None
         | Ok sexps ->
             let dir_names = find_vendored_dirs sexps in
-            if dir_names = [] then None
-            else
-              let dir_parent = Fpath.parent file.proj_path in
-              Some (List.map (fun name -> Fpath.(dir_parent / name)) dir_names))
+            let dir_parent = Fpath.parent file.proj_path in
+            Some
+              (dir_names
+              |> List.filter_map (fun name ->
+                  let vendored_dir = dir_parent / name in
+                  if Sys.file_exists !!(file.root //? vendored_dir) then
+                    Some vendored_dir
+                  else None)))

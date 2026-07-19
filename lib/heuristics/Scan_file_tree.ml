@@ -8,11 +8,12 @@ type kind = Reg of string Lazy.t | Dir | Other
 
 type file = {
   name : string;
+  root : Fpath.t option;
   proj_path : Fpath.t; (* relative to the project root *)
   kind : kind;
 }
 
-let scan ?(exclude_dir_names = []) ~root func =
+let scan ?(exclude_dir_names = []) ~(root : Fpath.t option) func =
   let rec loop fs_dir (proj_dir : Fpath.t option) =
     let entries =
       try Array.to_list (Sys.readdir !!fs_dir) with
@@ -28,11 +29,11 @@ let scan ?(exclude_dir_names = []) ~root func =
             match stat.st_kind with
             | S_REG ->
                 let contents = lazy (Sbom_util.File.read fs_child) in
-                func { name; proj_path = proj_child; kind = Reg contents }
+                func { name; root; proj_path = proj_child; kind = Reg contents }
             | S_DIR ->
                 if not (List.mem name exclude_dir_names) then (
-                  func { name; proj_path = proj_child; kind = Dir };
+                  func { name; root; proj_path = proj_child; kind = Dir };
                   loop fs_child (Some proj_child))
-            | _ -> func { name; proj_path = proj_child; kind = Other }))
+            | _ -> func { name; root; proj_path = proj_child; kind = Other }))
   in
-  loop root None
+  loop (Sbom_util.Path.of_root root) None

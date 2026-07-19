@@ -60,10 +60,17 @@ let warn (sus : suspected_component) : string =
   sprintf "Possible unlisted component at '%s': %s" !!(sus.fs_path)
     (String.concat "; " evidence_strs)
 
+let is_ignored_path ignored_paths =
+  let realpaths = Hashtbl.create 100 in
+  ignored_paths
+  |> List.iter (fun path -> Hashtbl.replace realpaths (Unix.realpath !!path) ());
+  fun (sus : suspected_component) ->
+    Hashtbl.mem realpaths (Unix.realpath !!(sus.fs_path))
+
 (*
    We try to detect components that were not already detected as Opam packages.
 *)
-let scan ~roots sbom =
+let scan ?(ignored_paths = []) ~roots sbom =
   (* Group the evidence by inferred component path. *)
   let components = Hashtbl.create 10 in
   let add root component_path evidence =
@@ -82,10 +89,8 @@ let scan ~roots sbom =
       H.Git_submodules.scan ~root
       |> List.iter (fun (sub : H.Git_submodules.git_submodule) ->
           add sub.root sub.proj_path (Git_submodule sub));
-      H.Scan_file_tree.scan
-        ~exclude_dir_names:[ "_build"; "_opam"; ".git" ]
-        ~root:(Option.value ~default:(Fpath.v ".") root)
-        (fun (file : H.Scan_file_tree.file) ->
+      H.Scan_file_tree.scan ~exclude_dir_names:[ "_build"; "_opam"; ".git" ]
+        ~root (fun (file : H.Scan_file_tree.file) ->
           if H.License_files.is_likely_license_file file then
             add root
               (Fpath.parent file.proj_path)
@@ -102,12 +107,18 @@ let scan ~roots sbom =
               |> List.iter (fun path ->
                   let dune_file = root //? file.proj_path in
                   add root path (Dune_vendored_dir dune_file))));
+  let suspected_components =
+    Hashtbl.fold
+      (fun (root, proj_path) v acc ->
+        { proj_path; fs_path = root //? proj_path; evidence = List.rev v }
+        :: acc)
+      components []
+  in
   let is_known_component = is_known_component sbom in
-  Hashtbl.fold
-    (fun (root, proj_path) v acc ->
-      { proj_path; fs_path = root //? proj_path; evidence = List.rev v } :: acc)
-    components []
+  let is_ignored_path = is_ignored_path ignored_paths in
+  suspected_components
   |> List.filter (fun sus ->
-      not (matches_known_component is_known_component sus))
+      (not (matches_known_component is_known_component sus))
+      && not (is_ignored_path sus))
   |> List.sort (fun a b -> Fpath.compare a.fs_path b.fs_path)
   |> List.map warn

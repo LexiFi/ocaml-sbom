@@ -1,4 +1,7 @@
-(vendored_dirs vendor)
+(vendored_dirs
+  dune-vendored-dir
+  missing-dune-vendored-dir  ; does not exist -> should not be reported
+)
 
 (library
   (name myproject)
