@@ -191,7 +191,7 @@ let edge_of_opam_dep (src : Dep.component) (dst_pkg : Opam_tree.package) : Dep.t
   in
   { src; dst; scopes }
 
-let edges_of_dep_tree (x : Opam_tree.t) : Dep.t list =
+let edges_of_dep_tree (x : Opam_tree.t) : Dep.component list * Dep.t list =
   let rec walk (opt_src : Dep.component option) dependencies =
     let edges =
       match opt_src with
@@ -205,7 +205,12 @@ let edges_of_dep_tree (x : Opam_tree.t) : Dep.t list =
     in
     edges @ deeper_edges
   in
-  walk None x.tree
+  (* The top-level entries in the tree are the root packages. They must be
+     included in the component list even when they have no dependencies and
+     therefore produce no edges. *)
+  let root_packages = List.map component_of_package x.tree in
+  let edges = walk None x.tree in
+  (root_packages, edges)
 
 let make_abs_path path = Fpath.v (Sys.getcwd ()) // path
 
@@ -226,7 +231,7 @@ let check_no_collisions resolution_sources =
       | None -> Hashtbl.add seen dst_name src)
     resolution_sources
 
-let get_package_info_for_deps ~switch deps =
+let get_package_info_for_deps ~switch ~root_packages deps =
   let packages : (Dep.component, OpamFile.OPAM.t) Hashtbl.t =
     Hashtbl.create 100
   in
@@ -241,6 +246,9 @@ let get_package_info_for_deps ~switch deps =
         Hashtbl.add packages component info;
         info
   in
+  (* Seed with root packages first so they are always present even when they
+     have no dependencies and therefore appear in no edge. *)
+  List.iter (fun c -> ignore (get_package_info c)) root_packages;
   deps
   |> List.iter (fun (dep : Dep.t) ->
       ignore (get_package_info dep.src);
@@ -280,11 +288,6 @@ let resolve ~use_lockfiles ~opamfiles =
         "--yes";
       ];
 
-    let root_names =
-      resolution_sources
-      |> List.map (fun (_src, dst_name) ->
-          Filename.chop_suffix dst_name ".opam")
-    in
     let roots =
       resolution_sources
       |> List.map (fun (_src, dst_name) -> !!(temp_dir / dst_name))
@@ -306,10 +309,12 @@ let resolve ~use_lockfiles ~opamfiles =
     let dep_tree =
       Yojson.Safe.from_file !!output_file |> Opam_tree.T.of_yojson
     in
-    let deps = edges_of_dep_tree dep_tree in
-    let package_info = get_package_info_for_deps ~switch:empty_switch deps in
+    let root_packages, deps = edges_of_dep_tree dep_tree in
+    let package_info =
+      get_package_info_for_deps ~switch:empty_switch ~root_packages deps
+    in
     let sources = List.map fst resolution_sources in
-    (root_names, deps, sources, package_info)
+    (root_packages, deps, sources, package_info)
   in
   (root_names, deps, sources, package_info, warnings)
 
@@ -324,7 +329,8 @@ let merge_scopes (a : Dep.scopes) (b : Dep.scopes) : Dep.scopes =
   }
 
 (* Handle duplicates, derive lists of nodes from the edges *)
-let deduplicate ~root_names source (edges : Dep.t list) : dependencies =
+let deduplicate ~root_packages source (edges : Dep.t list) : dependencies =
+  let root_names = List.map (fun (c : Dep.component) -> c.name) root_packages in
   let merged_edges = Hashtbl.create 100 in
   edges
   |> List.iter (fun (dep : Dep.t) ->
@@ -343,6 +349,10 @@ let deduplicate ~root_names source (edges : Dep.t list) : dependencies =
     |> List.sort Dep.compare_t
   in
   let all_components = Hashtbl.create 100 in
+  (* Seed with root packages so they are present even with no dependencies. *)
+  List.iter
+    (fun (c : Dep.component) -> Hashtbl.replace all_components c ())
+    root_packages;
   edges
   |> List.iter (fun (dep : Dep.t) ->
       Hashtbl.replace all_components dep.src ();
@@ -362,7 +372,7 @@ let deduplicate ~root_names source (edges : Dep.t list) : dependencies =
 let resolve_dependencies ?(use_lockfiles = Use_lockfiles_if_available)
     ~opamfiles () :
     dependencies * (Dep.component, OpamFile.OPAM.t) Hashtbl.t * string list =
-  let root_names, edges, source, package_info, warnings =
+  let root_packages, edges, source, package_info, warnings =
     resolve ~use_lockfiles ~opamfiles
   in
-  (deduplicate ~root_names source edges, package_info, warnings)
+  (deduplicate ~root_packages source edges, package_info, warnings)
