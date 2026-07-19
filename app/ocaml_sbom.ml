@@ -418,10 +418,75 @@ module Apply_overlay = struct
          an overlay file without having to re-run the full $(b,gen) step, \
          which invokes opam and can be slow.";
       `S Manpage.s_examples;
+      `P "$(b,Basic usage):";
       `Pre "$(mname) overlay sbom.json";
       `Pre "$(mname) overlay sbom.json --overlay fixes.json";
       `Pre "$(mname) overlay sbom.json -o patched.json";
       `Pre "$(mname) gen | $(mname) overlay";
+      `S "OVERLAY FILE FORMAT";
+      `P
+        "An overlay file is a JSON file with a $(b,format) field and an \
+         $(b,actions) list. Actions are applied sequentially. The precise \
+         specification is the ATD schema at \
+         https://github.com/LexiFi/ocaml-sbom/blob/main/lib/types/ocaml_sbom_overlay.atd";
+      `P "$(b,Remove a component by name):";
+      `Pre
+        {|{
+  "format": "ocaml-sbom-overlay/1.0",
+  "actions": [
+    { "Remove_component": { "name": "unwanted-pkg" } }
+  ]
+}|};
+      `P "$(b,Remove a component by PURL key):";
+      `Pre
+        {|{
+  "format": "ocaml-sbom-overlay/1.0",
+  "actions": [
+    { "Remove_component": { "key": "pkg:opam/unwanted-pkg@1.2.3" } }
+  ]
+}|};
+      `P
+        "$(b,Set properties on a component) (e.g. fix a missing or wrong \
+         license, add authors):";
+      `Pre
+        {|{
+  "format": "ocaml-sbom-overlay/1.0",
+  "actions": [
+    {
+      "Set_component_properties": {
+        "name": "some-pkg",
+        "spdx_license": "MIT",
+        "authors": [ { "Person": { "name": "Alice", "email": "alice@example.com" } } ],
+        "maintainers": [ { "Organization": { "name": "Acme Corp" } } ]
+      }
+    }
+  ]
+}|};
+      `P
+        "$(b,Add a component) that opam does not know about (e.g. a vendored C \
+         library):";
+      `Pre
+        {|{
+  "format": "ocaml-sbom-overlay/1.0",
+  "actions": [
+    {
+      "Add_component": {
+        "key": "pkg:github/madler/zlib@1.3.1",
+        "name": "zlib",
+        "version": "1.3.1",
+        "kind": { "Opam_package": { "library": true, "executable": false } },
+        "licensing": {
+          "declared": { "Atom": { "Spdx_id": "Zlib" } },
+          "concluded": "Unknown"
+        },
+        "source_distribution": {
+          "url": "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
+          "checksums": []
+        }
+      }
+    }
+  ]
+}|};
     ]
 
   let cmd =

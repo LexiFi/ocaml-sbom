@@ -1,5 +1,3 @@
-🚧 This project is under construction. 🚧
-
 # SBOM generator for OCaml projects
 
 ocaml-sbom is an [SBOM](https://en.wikipedia.org/wiki/Software_supply_chain)
@@ -9,16 +7,17 @@ manager.
 ## Features
 
 - Runs without installing the dependencies of the target project
-- Produces a dependency graph
+- Produces a graph of all Opam dependencies
 - Provides licensing information
 - Works with or without lockfiles (`.opam` or `.opam.locked` files)
 - Supports manual corrections via an overlay file
 - Exports to CycloneDX and to SPDX (2.3 and 3.0)
+- Warns against possible non-opam components found in the project
 
 ## Installation
 
 [Opam](https://opam.ocaml.org/) is required to build `ocaml-sbom` from
-source. Build it and install it with (TODO)
+source. Build it and install it with (coming soon!)
 
 ```
 $ opam install ocaml-sbom
@@ -46,7 +45,7 @@ $ ocaml-sbom -o myproject.ocaml-sbom --verbose
 An overlay file named `ocaml-sbom.overlay.json` is used if present.
 Its format is specified by
 https://github.com/LexiFi/ocaml-sbom/blob/main/lib/types/ocaml_sbom_overlay.atd.
-See `ocaml-sbom overlay --help` for examples (TODO).
+See `ocaml-sbom overlay --help` for examples.
 
 Then export to your preferred SBOM format:
 
