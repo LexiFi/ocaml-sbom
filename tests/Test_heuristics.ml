@@ -68,16 +68,17 @@ let test_vendored_dir_detection =
 
 let test_dune_vendored_dirs =
   Testo.create "dune_vendored_dirs parses (vendored_dirs ...)" (fun () ->
-      let content =
-        "(vendored_dirs vendor thirdparty)\n\n(library (name foo))\n"
-      in
+      (* Use the real dune file from the test repo. It declares two dirs:
+         'dune-vendored-dir' (exists) and 'missing-dune-vendored-dir' (absent).
+         Only the existing one should be returned. *)
+      let dune_path = test_repo / "src" / "dune" in
       let file =
         Sbom_heuristics.Scan_file_tree.
           {
             name = "dune";
             root = test_root;
-            proj_path = Fpath.v "subdir" / "dune";
-            kind = Reg (lazy content);
+            proj_path = Fpath.v "src" / "dune";
+            kind = Reg (lazy (Sbom_util.File.read dune_path));
           }
       in
       match
@@ -88,7 +89,7 @@ let test_dune_vendored_dirs =
       | Some paths ->
           let paths = List.sort Fpath.compare paths in
           Testo.(check (list fpath))
-            [ Fpath.v "subdir" / "thirdparty"; Fpath.v "subdir" / "vendor" ]
+            [ Fpath.v "src" / "dune-vendored-dir" ]
             paths)
 
 let test_dune_vendored_dirs_non_dune =
