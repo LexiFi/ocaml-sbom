@@ -28,9 +28,6 @@ commands:
             - opam-ubuntu-<< parameters.ocaml_version >>-v1-{{ checksum "week_id.txt" }}
             - opam-ubuntu-<< parameters.ocaml_version >>-v1-{{ checksum "previous_week_id.txt" }}
       - run:
-          name: Install system dependencies
-          command: ./.circleci/setup-system
-      - run:
           name: Install opam dependencies
           command: ./.circleci/setup-opam
       - save_cache:
