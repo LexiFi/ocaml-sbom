@@ -1,5 +1,7 @@
 # SBOM generator for OCaml projects
 
+[![CircleCI](https://circleci.com/gh/LexiFi/ocaml-sbom.svg?style=svg)](https://app.circleci.com/pipelines/github/LexiFi/ocaml-sbom)
+
 ocaml-sbom is an [SBOM](https://en.wikipedia.org/wiki/Software_supply_chain)
 generator for OCaml projects or subprojects that use the Opam package
 manager.
