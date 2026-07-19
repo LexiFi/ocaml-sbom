@@ -1,0 +1,3 @@
+[submodule "submodproject"]
+	path = submodules/submodproject
+	url = https://github.com/example/submodproject.git

@@ -33,7 +33,7 @@ let verbose_term : bool Term.t =
 
 module Gen = struct
   type conf = {
-    project_roots : Fpath.t list; (* each must exist *)
+    project_roots : Fpath.t option list; (* each must exist *)
     output_file : Fpath.t option;
     overlay_file : Fpath.t option; (* must exist if provided *)
     use_lockfiles : Sbom_deps.Opam_resolve.use_lockfiles;
@@ -61,7 +61,11 @@ module Gen = struct
         flush stderr;
         if warnings <> [] then exit 1
 
-  let project_roots_term : string list Term.t =
+  (* We represent the default project root as 'None' rather than "."
+     so as to avoid ending up with spurious leading './' in file paths.
+     However, if the user specifies '.' as the root, we honor that
+     and it will show up as a path prefix. *)
+  let project_roots_term : string option list Term.t =
     let info =
       Arg.info [] ~docv:"PROJECT_ROOT"
         ~doc:
@@ -69,7 +73,7 @@ module Gen = struct
            analyze multiple projects at once (useful when local packages \
            depend on each other). Defaults to the current directory."
     in
-    Arg.value (Arg.pos_all Arg.file [ "." ] info)
+    Arg.value (Arg.pos_all (Arg.some Arg.file) [ None ] info)
 
   let use_lockfiles_term =
     let open Sbom_deps.Opam_resolve in
@@ -107,7 +111,7 @@ module Gen = struct
     let combine project_roots output_file overlay_file use_lockfiles verbose =
       run
         {
-          project_roots = List.map Fpath.v project_roots;
+          project_roots = List.map (Option.map Fpath.v) project_roots;
           output_file = Option.map Fpath.v output_file;
           overlay_file = Option.map Fpath.v overlay_file;
           use_lockfiles;

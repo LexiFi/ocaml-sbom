@@ -1,8 +1,7 @@
 (* Get information about an opam package *)
 
 open Printf
-
-let ( !! ) = Fpath.to_string
+open Sbom_util.Path.Ops
 
 let parse_file path =
   OpamFilename.of_string !!path |> OpamFile.make |> OpamFile.OPAM.read

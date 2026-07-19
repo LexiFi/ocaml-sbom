@@ -4,7 +4,7 @@ val generate_sbom :
   ?output_file:Fpath.t ->
   ?overlay_file:Fpath.t ->
   ?use_lockfiles:Sbom_deps.Opam_resolve.use_lockfiles ->
-  project_roots:Fpath.t list ->
+  project_roots:Fpath.t option list ->
   unit ->
   string list
 (** Generate an SBOM and print it to stdout or save it to the provided output

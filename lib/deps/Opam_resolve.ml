@@ -16,6 +16,8 @@
    6. Read the JSON trees and convert them to our internal format.
 *)
 
+open Sbom_util.Path.Ops
+
 type dependencies = {
   root_components : Dep.component list;
   components : Dep.component list;
@@ -28,18 +30,15 @@ type use_lockfiles =
   | Require_lockfiles
   | Ignore_lockfiles
 
-let ( / ) = Fpath.( / )
-let ( // ) = Fpath.( // )
-let ( !! ) = Fpath.to_string
-
 (* Find opam package files in the project root directory.
    These are files named '*.opam' or simply 'opam', as per:
    https://opam.ocaml.org/doc/Packaging.html *)
-let find_opamfiles project_root =
-  Sys.readdir !!project_root |> Array.to_list
+let find_opamfiles (project_root : Fpath.t option) =
+  Sys.readdir !!(Sbom_util.Path.of_root project_root)
+  |> Array.to_list
   |> List.filter_map (fun name ->
       if Filename.check_suffix name ".opam" || name = "opam" then
-        let path = project_root / name in
+        let path = project_root /? name in
         if Sys.is_regular_file !!path then
           (* works also with symlinks to regular files *)
           Some path

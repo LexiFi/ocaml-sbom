@@ -1,0 +1,12 @@
+; A collection of heuristics used to inspect the project and
+; produce low-confidence warnings
+(library
+  (name sbom_heuristics)
+  (libraries
+    fpath
+    parsexp
+    sexplib0
+    unix
+    sbom_util
+  )
+)

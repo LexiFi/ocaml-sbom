@@ -6,10 +6,10 @@
 *)
 
 open Printf
+open Sbom_util.Path.Ops
 module S = Sbom_types.Ocaml_sbom
 module O = Sbom_types.Ocaml_sbom_overlay
 
-let ( !! ) = Fpath.to_string
 let default_name = "ocaml-sbom.overlay.json"
 let overlay_format_version = "ocaml-sbom-overlay/1.0"
 
