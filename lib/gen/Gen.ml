@@ -35,7 +35,11 @@ let opam_hash_kind (h : OpamHash.t) : S.checksum_kind =
 let opam_hash_checksum (h : OpamHash.t) : S.checksum =
   S.create_checksum ~kind:(opam_hash_kind h) ~value:(OpamHash.contents h) ()
 
-let opam_url_string (u : OpamUrl.t) : string = OpamUrl.to_string u
+(* Don't return a private URL if we can prove it *)
+let opam_url_string (u : OpamUrl.t) : string option =
+  match u.transport (* scheme *) with
+  | "file" -> None
+  | _ -> Some (OpamUrl.to_string u)
 
 (* naive, approximate email regexp; good enough for the purpose
    of splitting "The Name <name@example.com>" into "The Name"
@@ -132,15 +136,17 @@ let make_component
     | [] -> None
   in
   let dev_repo_url =
-    Option.map (fun u -> opam_url_string u) (OpamFile.OPAM.dev_repo o)
+    match OpamFile.OPAM.dev_repo o with
+    | None -> None
+    | Some url -> opam_url_string url
   in
   let source_distribution =
     match OpamFile.OPAM.url o with
-    | None -> S.create_url_with_checksums ~url:"" ~checksums:[] ()
+    | None -> S.create_url_with_checksums ~checksums:[] ()
     | Some u ->
         let url = opam_url_string (OpamFile.URL.url u) in
         let checksums = List.map opam_hash_checksum (OpamFile.URL.checksum u) in
-        S.create_url_with_checksums ~url ~checksums ()
+        S.create_url_with_checksums ?url ~checksums ()
   in
   S.create_component ~key:(make_purl x) ~name:x.name ~version:x.version
     ~kind:(S.Opam_package Unknown) ~authors ~maintainers ~licensing ~tags

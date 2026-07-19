@@ -16,15 +16,15 @@ type document
   namespace
     <doc text="UUID - either random or a hash of the input data"> : string;
 
-  root_components
+  ~root_components
     <doc text="The collection of components this SBOM is about">
     : purl.t list;
 
-  components
+  ~components
     <doc text="All components including root components">
     : component list;
 
-  dep_edges : dep_edge list;
+  ~dep_edges : dep_edge list;
 }
 
 type 'a known
@@ -47,10 +47,10 @@ type component
   name : string;
   version : string;
   kind : component_kind;
-  authors : actor list;
-  maintainers: actor list;
+  ~authors : actor list;
+  ~maintainers: actor list;
   licensing : licensing;
-  tags: string list;
+  ~tags: string list;
   ?description <doc text="Opam's {{synopsis}} field">: string option;
   ?homepage_url: string option;
   ?doc_url: string option;
@@ -60,8 +60,8 @@ type component
 }
 
 type url_with_checksums = {
-  url: string;
-  checksums: checksum list;
+  ?url: string option;
+  ~checksums: checksum list;
 }
 
 type checksum_kind
