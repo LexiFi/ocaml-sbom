@@ -59,3 +59,25 @@ validate:
 	# (install with: 'pip install spdx-tools')
 	# (no validator available for SPDX 3.0 (?))
 	pyspdxtools -i ocaml-sbom.spdx2.json
+
+# Update the opam files generated from 'dune-project'
+.PHONY: opam-files
+opam-files:
+	opam exec -- dune build *.opam
+
+# Attempt an automated release for the checked out branch.
+#
+# Release process:
+#
+# 1. Make sure the opam files are up to date: run 'make opam-files'.
+# 2. Update CHANGES.md which will be used by dune-release to extract the
+#    version and the release notes.
+# 3. Run the release steps below.
+#
+.PHONY: opam-release
+opam-release:
+	dune-release tag
+	dune-release distrib
+	dune-release publish
+	dune-release opam pkg
+	dune-release opam submit
