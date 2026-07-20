@@ -6,7 +6,7 @@ build:
 .PHONY: setup
 setup:
 	pre-commit --version || (echo "Please install 'pre-commit'"; exit 1)
-	opam install --deps-only --with-test --with-doc --with-dev ./*.opam
+	opam install --locked --deps-only --with-test --with-doc --with-dev .
 
 .PHONY: test
 test:

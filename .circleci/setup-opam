@@ -16,4 +16,4 @@ if ! opam repo list | grep -q '^github\b'; then
 fi
 # no need for 'opam update'
 
-opam install --locked --deps-only --with-test -y ./ocaml-sbom.opam
+opam install --locked --deps-only --with-test -y .
