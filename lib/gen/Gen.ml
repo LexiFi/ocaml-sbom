@@ -41,6 +41,12 @@ let opam_url_string (u : OpamUrl.t) : string option =
   | "file" -> None
   | _ -> Some (OpamUrl.to_string u)
 
+(* Crude URL filter to ignore junk URLs such as " " found in opam files
+   that opam doesn't validate but SBOM validators complain about *)
+let is_http_url str =
+  String.starts_with ~prefix:"https://" str
+  || String.starts_with ~prefix:"http://" str
+
 (* naive, approximate email regexp; good enough for the purpose
    of splitting "The Name <name@example.com>" into "The Name"
    and "name@example.com". *)
@@ -122,18 +128,18 @@ let make_component
   let description = OpamFile.OPAM.synopsis o in
   let homepage_url =
     match OpamFile.OPAM.homepage o with
-    | url :: _ -> Some url
-    | [] -> None
+    | url :: _ when is_http_url url -> Some url
+    | _ -> None
   in
   let doc_url =
     match OpamFile.OPAM.doc o with
-    | url :: _ -> Some url
-    | [] -> None
+    | url :: _ when is_http_url url -> Some url
+    | _ -> None
   in
   let bug_reports_url =
     match OpamFile.OPAM.bug_reports o with
-    | url :: _ -> Some url
-    | [] -> None
+    | url :: _ when is_http_url url -> Some url
+    | _ -> None
   in
   let dev_repo_url =
     match OpamFile.OPAM.dev_repo o with
