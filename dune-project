@@ -29,7 +29,7 @@ to CycloneDX and SPDX.
     opam-format
     parsexp
     sexplib0
-    spdx_licenses
+    (spdx_licenses (>= 1.4.0))
     (testo (and (>= 0.5.0) :with-test))
     uuidm
   )

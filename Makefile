@@ -8,8 +8,7 @@ setup:
 	pre-commit --version || (echo "Please install 'pre-commit'"; exit 1)
 	# Should we use a lockfile ('--locked')?
 	# It would impose an OCaml version.
-	opam install --deps-only \
-	  --with-test --with-doc --with-dev-setup --with-doc .
+	opam install --deps-only --with-test --with-doc --with-dev-setup .
 
 .PHONY: test
 test:
