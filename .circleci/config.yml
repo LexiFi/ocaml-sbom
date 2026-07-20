@@ -36,7 +36,7 @@ commands:
             - ~/.opam
       - run:
           name: Check code formatting
-          command: pre-commit run -a
+          command: opam exec -- pre-commit run -a
       - run:
           name: Build
           command: opam exec -- dune build
