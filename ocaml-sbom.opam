@@ -2,7 +2,8 @@
 opam-version: "2.0"
 synopsis: "SBOM generator for OCaml projects"
 description: """
-ocaml-sbom is an SBOM generator for OCaml projects with export to CycloneDX.
+ocaml-sbom is an SBOM generator for OCaml projects with export
+to CycloneDX and SPDX.
 """
 maintainer: ["Martin Jambon <martin@mjambon.com>"]
 authors: ["Martin Jambon"]
