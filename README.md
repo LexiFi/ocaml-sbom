@@ -18,8 +18,8 @@ manager.
 
 ## Installation
 
-[Opam](https://opam.ocaml.org/) is required to build `ocaml-sbom` from
-source. Build it and install it with (coming soon!)
+[Opam](https://opam.ocaml.org/) (>= 2.2.0) is required to build
+`ocaml-sbom` from source. Build it and install it with (coming soon!)
 
 ```
 $ opam install ocaml-sbom
