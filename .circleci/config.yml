@@ -45,7 +45,7 @@ commands:
           command: opam exec -- make test
       - run:
           name: Generate SBOM
-          command: make sbom
+          command: opam exec -- make sbom
 
 jobs:
   linux_build:
