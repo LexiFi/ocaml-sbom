@@ -24,6 +24,6 @@ if ! opam repo list | grep -q '^github\b'; then
     github https://github.com/ocaml/opam-repository.git
   opam repo remove default
 fi
-# no need for 'opam update'
 
+opam update
 opam install --deps-only --with-test --with-dev-setup -y .
