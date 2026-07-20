@@ -23,6 +23,7 @@ clean:
 .PHONY: sbom
 sbom: build
 	opam lock .
+	cat ocaml-sbom.ocaml-sbom.locked
 	./ocaml-sbom gen -v -o ocaml-sbom.ocaml-sbom \
 	  --ignore-suspected-component lib/heuristics \
 	  --ignore-suspected-component tests/test-repo \
