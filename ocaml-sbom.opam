@@ -11,13 +11,16 @@ homepage: "https://github.com/LexiFi/ocaml-sbom"
 bug-reports: "https://github.com/LexiFi/ocaml-sbom/issues"
 depends: [
   "dune" {>= "3.18"}
-  "ocaml" {>= "4.14.0"}
+  "ocaml" {>= "5.1.0"}
   "atdml" {build}
   "cmdliner"
   "fpath"
   "ocamlformat" {>= "0.28.0" & < "0.29.0" & with-dev-setup}
   "opam-format"
+  "parsexp"
+  "sexplib0"
   "spdx_licenses"
+  "testo" {>= "0.5.0" & with-test}
   "uuidm"
   "odoc" {with-doc}
 ]

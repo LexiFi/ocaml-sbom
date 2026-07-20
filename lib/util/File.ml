@@ -2,13 +2,7 @@
 
 open Path.Ops
 
-let read path =
-  let ic = open_in !!path in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr ic)
-    (fun () ->
-      let n = in_channel_length ic in
-      really_input_string ic n)
+let read path = In_channel.with_open_text !!path In_channel.input_all
 
 let rec rm_recursive path =
   let path_str = !!path in

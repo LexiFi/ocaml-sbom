@@ -6,12 +6,15 @@ build:
 .PHONY: setup
 setup:
 	pre-commit --version || (echo "Please install 'pre-commit'"; exit 1)
-	opam install --deps-only --with-test --with-doc --with-dev ./*.opam
+	# Should we use a lockfile ('--locked')?
+	# It would impose an OCaml version.
+	opam install --deps-only \
+	  --with-test --with-doc --with-dev-setup --with-doc .
 
 .PHONY: test
 test:
 	dune build tests/test.exe
-	./test
+	./test --stack-backtrace
 
 .PHONY: clean
 clean:
@@ -20,7 +23,15 @@ clean:
 .PHONY: sbom
 sbom: build
 	opam lock .
-	./ocaml-sbom -v -o ocaml-sbom.ocaml-sbom
+	cat ocaml-sbom.opam.locked
+	./ocaml-sbom gen -v -o ocaml-sbom.ocaml-sbom \
+	  --ignore-suspected-component lib/heuristics \
+	  --ignore-suspected-component tests/test-repo \
+	  --ignore-suspected-component tests/test-repo/src/dune-vendored-dir \
+	  --ignore-suspected-component tests/test-repo/submodules/submodproject \
+	  --ignore-suspected-component tests/test-repo/third_party/extlib \
+	  --ignore-suspected-component tests/test-repo/vendor/anotherlib \
+	  --ignore-suspected-component tests/test-repo/vendor/mylib
 	$(MAKE) export-sbom
 
 .PHONY: export-sbom

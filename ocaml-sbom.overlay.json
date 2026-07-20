@@ -1,0 +1,70 @@
+{
+  "format": "ocaml-sbom-overlay/1.0",
+  "actions": [
+    {
+      "Remove_component": {
+        "name": "ocamlformat",
+        "recursive": true
+      }
+    },
+    {
+      "Set_component_properties": {
+        "opam_package_kind": { "library": true, "executable": false }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "atdml",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "cppo",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "menhir",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "ocamlbuild",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "ocamlfind",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "ocamlformat",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "ocp-indent",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "topkg",
+        "opam_package_kind": { "library": false, "executable": true }
+      }
+    },
+    {
+      "Set_component_properties": {
+        "name": "yojson",
+        "opam_package_kind": { "library": true, "executable": true }
+      }
+    }
+  ]
+}

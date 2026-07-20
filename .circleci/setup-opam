@@ -1,0 +1,30 @@
+#! /usr/bin/env bash
+#
+# Set up opam and install opam packages required to build and test ocamlgrep
+#
+# This is used by the CI build.
+#
+set -eu
+
+# - We need an opam version that supports 'with-dev-setup' tags
+#   and 'opam tree' (opam >= 2.2.0).
+# - We need 'pre-commit' to run Git pre-commit hooks (ocamlformat).
+sudo apk --no-cache add \
+  opam \
+  pre-commit
+
+echo -n "opam version: "
+opam --version
+
+eval "$(opam env)"
+
+# Change the repo from 'git+file:///home/opam/opam-repository'
+# back to the original 'https://opam.ocaml.org'.
+if ! opam repo list | grep -q -F 'https://opam.ocaml.org'; then
+  opam repo set-url default https://opam.ocaml.org
+  # an opam update is included
+else
+  opam update
+fi
+
+opam install --deps-only --with-test --with-dev-setup --with-doc -y .

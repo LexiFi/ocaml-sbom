@@ -17,16 +17,20 @@
   (name ocaml-sbom)
   (synopsis "SBOM generator for OCaml projects")
   (description "\
-ocaml-sbom is an SBOM generator for OCaml projects with export to CycloneDX.
+ocaml-sbom is an SBOM generator for OCaml projects with export
+to CycloneDX and SPDX.
 ")
   (depends
-    (ocaml (>= 4.14.0))
+    (ocaml (>= 5.1.0))
     (atdml :build)
     cmdliner
     fpath
     (ocamlformat (and (>= 0.28.0) (< 0.29.0) :with-dev-setup))
     opam-format
+    parsexp
+    sexplib0
     spdx_licenses
+    (testo (and (>= 0.5.0) :with-test))
     uuidm
   )
   (maintenance_intent "(latest)")
