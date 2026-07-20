@@ -7,8 +7,8 @@
 set -eu
 
 # - We need an opam version that supports 'with-dev-setup' tags
-#   (opam 2.0 doesn't)
-# - We need 'pre-commit' to run Git pre-commit hooks (ocamlformat)
+#   and 'opam tree' (opam >= 2.2.0).
+# - We need 'pre-commit' to run Git pre-commit hooks (ocamlformat).
 sudo apk --no-cache add \
   opam \
   pre-commit
