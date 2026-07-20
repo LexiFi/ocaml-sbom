@@ -25,13 +25,13 @@ commands:
             echo $(( $(date +%s) / 604800 - 1 )) > previous_week_id.txt
       - restore_cache:
           keys:
-            - opam-ubuntu-<< parameters.ocaml_version >>-v1-{{ checksum "week_id.txt" }}
-            - opam-ubuntu-<< parameters.ocaml_version >>-v1-{{ checksum "previous_week_id.txt" }}
+            - opam-alpine-<< parameters.ocaml_version >>-v1-{{ checksum "week_id.txt" }}
+            - opam-alpine-<< parameters.ocaml_version >>-v1-{{ checksum "previous_week_id.txt" }}
       - run:
           name: Install opam dependencies
           command: ./.circleci/setup-opam
       - save_cache:
-          key: opam-ubuntu-<< parameters.ocaml_version >>-v1-{{ checksum "week_id.txt" }}
+          key: opam-alpine-<< parameters.ocaml_version >>-v1-{{ checksum "week_id.txt" }}
           paths:
             - ~/.opam
       - run:
@@ -50,7 +50,7 @@ jobs:
       ocaml_version:
         type: string
     docker:
-      - image: ocaml/opam:ubuntu-24.04-ocaml-<< parameters.ocaml_version >>
+      - image: ocaml/opam:alpine-ocaml-<< parameters.ocaml_version >>
     working_directory: ~/ocaml-sbom
     steps:
       - build:
