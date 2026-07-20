@@ -139,7 +139,6 @@ workflows:
           matrix:
             parameters:
               ocaml_version:
-                - "4.14"
                 - "5.1"
                 - "5.2"
                 - "5.3"
