@@ -50,6 +50,8 @@ jobs:
       ocaml_version:
         type: string
     docker:
+      # Using alpine rather than ubuntu because ubuntu's opam doesn't
+      # support 'with-dev-setup' dependency tags
       - image: ocaml/opam:alpine-ocaml-<< parameters.ocaml_version >>
     working_directory: ~/ocaml-sbom
     steps:
