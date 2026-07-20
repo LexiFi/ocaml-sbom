@@ -6,6 +6,9 @@
 #
 set -eu
 
+echo -n "opam version: "
+opam --version
+
 eval "$(opam env)"
 
 # Set up the opam repo (skip if already done, e.g. from a restored cache).
