@@ -42,17 +42,18 @@ export-sbom:
 	  -o ocaml-sbom.spdx2.json
 	./ocaml-sbom export ocaml-sbom.ocaml-sbom --format spdx-3.0 \
 	  -o ocaml-sbom.spdx3.json
+	# suggested next: run 'make validate'
 
 # Validate exported SBOMs using external tools
 .PHONY: validate
 validate:
-	# CycloneDX validation
+	### CycloneDX validation
 	docker run -v "$$(pwd)"/ocaml-sbom.cdx.json:/ocaml-sbom.cdx.json \
 	  cyclonedx/cyclonedx-cli validate \
 	    --input-format json \
 	    --input-version v1_6 \
 	    --input-file /ocaml-sbom.cdx.json
-	# SPDX 2.3 validation
+	### SPDX 2.3 validation
 	# (install with: 'pip install spdx-tools')
 	# (no validator available for SPDX 3.0 (?))
 	pyspdxtools -i ocaml-sbom.spdx2.json

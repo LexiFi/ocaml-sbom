@@ -62,14 +62,24 @@ let actor_of_string s : S.actor =
 
 (* Convert from Spdx_licenses.t to our internal license_expr type.
    The two type hierarchies are structurally similar but not identical:
-   - LicenseIDPlus folds the "+" into the id string
+   - LicenseIDPlus is normalized: prefer the canonical "-or-later" identifier
+     when one exists; otherwise drop the "+" (e.g. CC0-1.0+ → CC0-1.0)
    - LicenseRef/AdditionRef reconstruct the canonical "LicenseRef-" prefix
    - exception id and AdditionRef are both represented as plain strings *)
 
 let spdx_simple (sl : Spdx_licenses.simple_license) : S.license_atom =
   match sl with
   | LicenseID id -> S.Spdx_id id
-  | LicenseIDPlus id -> S.Spdx_id (id ^ "+")
+  | LicenseIDPlus id -> (
+      (* Modern SPDX uses explicit "-or-later" identifiers rather than the "+"
+         operator. If "{id}-or-later" is a known SPDX ID use that canonical form;
+         otherwise drop the "+" entirely. The "+" form is rejected by validators
+         such as pyspdxtools when no "-or-later" variant exists in the license
+         list (e.g. CC0-1.0 has no CC0-2.0, so CC0-1.0+ is meaningless). *)
+      let or_later = id ^ "-or-later" in
+      match Spdx_licenses.parse or_later with
+      | Ok (Simple (LicenseID canonical)) -> S.Spdx_id canonical
+      | _ -> S.Spdx_id id)
   | LicenseRef { document_ref = None; license_ref } ->
       S.License_ref (S.create_license_ref ~id:("LicenseRef-" ^ license_ref) ())
   | LicenseRef { document_ref = Some doc; license_ref } ->
