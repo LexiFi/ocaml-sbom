@@ -45,6 +45,8 @@ export-sbom:
 	# suggested next: run 'make validate'
 
 # Validate exported SBOMs using external tools
+# TODO: run this in CI
+#
 .PHONY: validate
 validate:
 	### CycloneDX validation
