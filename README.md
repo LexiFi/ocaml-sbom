@@ -16,7 +16,7 @@ manager.
 
 ## Installation
 
-[Opam](https://opam.ocaml.org/) (>= 2.2.0) is required to build
+[Opam](https://opam.ocaml.org/) is required to build
 `ocaml-sbom` from source. Build it and install it with (coming soon!)
 
 ```
@@ -28,6 +28,8 @@ pre-built `ocaml-sbom` executable. However, you only need the bare
 `opam` command. No need to install an OCaml compiler or any Opam packages.
 
 ## Usage
+
+The `opam` command (>= 2.2.0) is required at runtime.
 
 The target project must ship with one or several Opam files. These are
 typically placed at the project root and have the `.opam` extension.
