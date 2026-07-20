@@ -11,7 +11,7 @@ setup:
 .PHONY: test
 test:
 	dune build tests/test.exe
-	./test
+	./test --stack-backtrace
 
 .PHONY: clean
 clean:

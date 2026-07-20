@@ -132,7 +132,7 @@ jobs:
           command: |
             # Copied from the makefile (please keep it in sync and simple)
             opam exec -- dune build tests/test.exe
-            ./test
+            ./test --stack-backtrace
 
 workflows:
   version: 2
