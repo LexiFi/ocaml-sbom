@@ -26,4 +26,4 @@ if ! opam repo list | grep -q '^github\b'; then
 fi
 # no need for 'opam update'
 
-opam install --locked --deps-only --with-test -y .
+opam install --deps-only --with-test -y .
