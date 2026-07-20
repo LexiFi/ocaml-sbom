@@ -1,0 +1,102 @@
+opam-version: "2.0"
+name: "ocaml-sbom"
+version: "dev"
+synopsis: "SBOM generator for OCaml projects"
+description:
+  "ocaml-sbom is an SBOM generator for OCaml projects with export to CycloneDX."
+maintainer: "Martin Jambon <martin@mjambon.com>"
+authors: "Martin Jambon"
+license: "ISC"
+homepage: "https://github.com/LexiFi/ocaml-sbom"
+bug-reports: "https://github.com/LexiFi/ocaml-sbom/issues"
+depends: [
+  "astring" {= "0.8.5"}
+  "atd" {= "4.2.0"}
+  "atdml" {= "4.2.0"}
+  "base" {= "v0.17.3" & with-dev-setup}
+  "base-bigarray" {= "base"}
+  "base-domains" {= "base"}
+  "base-effects" {= "base"}
+  "base-nnp" {= "base"}
+  "base-threads" {= "base"}
+  "base-unix" {= "base"}
+  "camlp-streams" {= "5.0.1" & with-doc}
+  "cmdliner" {= "2.1.1"}
+  "cppo" {= "1.8.0" & with-test}
+  "crunch" {= "4.0.0" & with-doc}
+  "csexp" {= "1.5.2" & with-dev-setup}
+  "dune" {= "3.24.0"}
+  "dune-build-info" {= "3.24.0" & with-dev-setup}
+  "dune-configurator" {= "2.9.3" & with-dev-setup}
+  "easy-format" {= "1.3.4"}
+  "either" {= "1.0.0" & with-dev-setup}
+  "fix" {= "20250919" & with-dev-setup}
+  "fmt" {= "0.11.0" & with-doc}
+  "fpath" {= "0.7.3"}
+  "jsonm" {= "1.0.2"}
+  "menhir" {= "20260209"}
+  "menhirCST" {= "20260209"}
+  "menhirGLR" {= "20260209"}
+  "menhirLib" {= "20260209"}
+  "menhirSdk" {= "20260209"}
+  "ocaml" {= "5.4.1"}
+  "ocaml-base-compiler" {= "5.4.1"}
+  "ocaml-compiler" {= "5.4.1"}
+  "ocaml-compiler-libs" {= "v0.17.0" & with-test}
+  "ocaml-config" {= "3"}
+  "ocaml-options-vanilla" {= "1"}
+  "ocaml-version" {= "4.1.3" & with-dev-setup}
+  "ocaml_intrinsics_kernel" {= "v0.17.2" & with-dev-setup}
+  "ocamlbuild" {= "0.16.1"}
+  "ocamlfind" {= "1.9.8"}
+  "ocamlformat" {= "0.28.1" & with-dev-setup}
+  "ocamlformat-lib" {= "0.28.1" & with-dev-setup}
+  "ocamlgraph" {= "2.2.0"}
+  "ocp-indent" {= "1.9.0" & with-dev-setup}
+  "odoc" {= "3.1.0" & with-doc}
+  "odoc-parser" {= "3.1.0" & with-doc}
+  "opam-core" {= "2.5.1"}
+  "opam-file-format" {= "2.2.0"}
+  "opam-format" {= "2.5.1"}
+  "parsexp" {= "v0.17.0"}
+  "patch" {= "3.1.1"}
+  "ppx_derivers" {= "1.2.1" & with-test}
+  "ppx_deriving" {= "6.1.1" & with-test}
+  "ppxlib" {= "0.38.0" & with-test}
+  "ptime" {= "1.2.0" & with-doc}
+  "re" {= "1.14.0"}
+  "result" {= "1.5" & with-dev-setup}
+  "seq" {= "base" & with-doc}
+  "sexplib0" {= "v0.17.0"}
+  "sha" {= "1.15.4"}
+  "spdx_licenses" {= "1.4.0"}
+  "stdio" {= "v0.17.0" & with-dev-setup}
+  "stdlib-shims" {= "0.3.0"}
+  "swhid_core" {= "0.1"}
+  "testo" {= "0.5.0" & with-test}
+  "testo-diff" {= "0.5.0" & with-test}
+  "testo-util" {= "0.5.0" & with-test}
+  "topkg" {= "1.1.1"}
+  "tyxml" {= "4.6.0" & with-doc}
+  "uucp" {= "17.0.0" & with-dev-setup}
+  "uuidm" {= "0.9.10"}
+  "uuseg" {= "17.0.0" & with-dev-setup}
+  "uutf" {= "1.0.4"}
+  "yojson" {= "3.0.0"}
+]
+build: [
+  ["dune" "subst"] {dev}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "@install"
+    "@runtest" {with-test}
+    "@doc" {with-doc}
+  ]
+]
+dev-repo: "git+https://github.com/LexiFi/ocaml-sbom.git"
+x-maintenance-intent: ["(latest)"]

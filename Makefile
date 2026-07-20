@@ -20,7 +20,14 @@ clean:
 .PHONY: sbom
 sbom: build
 	opam lock .
-	./ocaml-sbom -v -o ocaml-sbom.ocaml-sbom
+	./ocaml-sbom gen -v -o ocaml-sbom.ocaml-sbom \
+	  --ignore-suspected-component lib/heuristics \
+	  --ignore-suspected-component tests/test-repo \
+	  --ignore-suspected-component tests/test-repo/src/dune-vendored-dir \
+	  --ignore-suspected-component tests/test-repo/submodules/submodproject \
+	  --ignore-suspected-component tests/test-repo/third_party/extlib \
+	  --ignore-suspected-component tests/test-repo/vendor/anotherlib \
+	  --ignore-suspected-component tests/test-repo/vendor/mylib
 	$(MAKE) export-sbom
 
 .PHONY: export-sbom
