@@ -28,7 +28,7 @@ let verbose_term : bool Term.t =
   Arg.value (Arg.flag info)
 
 (****************************************************************************)
-(* 'gen' subcommand — generate an SBOM from a Dune project *)
+(* 'gen' subcommand - generate an SBOM from an OCaml project *)
 (****************************************************************************)
 
 module Gen = struct
@@ -75,9 +75,8 @@ module Gen = struct
     let info =
       Arg.info [] ~docv:"PROJECT_ROOT"
         ~doc:
-          "Root directory of a Dune project to analyze. May be repeated to \
-           analyze multiple projects at once (useful when local packages \
-           depend on each other). Defaults to the current directory."
+          "Root directory of an OCaml project to analyze. Must contain Opam \
+           files (*.opam). Defaults to the current directory."
     in
     Arg.value (Arg.pos_all (Arg.some Arg.file) [ None ] info)
 
@@ -168,20 +167,20 @@ module Gen = struct
       $ overlay_file_term $ project_roots_term $ use_lockfiles_term
       $ tolerate_warnings_term $ verbose_term)
 
-  let doc = "generate an SBOM for a Dune project"
+  let doc = "generate an SBOM for an OCaml project"
 
   let man =
     [
       `S Manpage.s_description;
       `P
-        "Analyze one or more Dune projects rooted at the given \
+        "Analyze one or more OCaml projects rooted at the given \
          $(b,PROJECT_ROOT) directories and write a combined Software Bill of \
          Materials to $(b,--output) (or standard output). The SBOM is written \
          in $(mname)'s internal JSON format, which can later be converted to a \
          standard format with the $(b,export) subcommand.";
       `P
         "Passing multiple roots is useful when local packages depend on each \
-         other: all roots are analyzed in a single opam resolution pass so \
+         other: all roots are analyzed in a single Opam resolution pass so \
          cross-root dependencies are resolved correctly.";
       `P
         "The project's opam metadata and lock files are used to enumerate \
@@ -498,7 +497,7 @@ end
 (* Root command *)
 (****************************************************************************)
 
-let doc = "generate and export SBOMs for OCaml/Dune projects"
+let doc = "generate and export SBOMs for OCaml projects"
 
 let man =
   [
