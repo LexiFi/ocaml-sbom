@@ -494,6 +494,25 @@ module Apply_overlay = struct
 end
 
 (****************************************************************************)
+(* 'version' subcommand *)
+(****************************************************************************)
+
+module Version = struct
+  let version =
+    (* The actual version is inserted here by dune-release *)
+    let v = "%%VERSION%%" in
+    if v <> "" && v.[0] = '%' then "dev" else v
+
+  let run () = print_endline version
+  let cmd_term = Term.(const run $ const ())
+  let doc = "print ocaml-sbom's version"
+
+  let cmd =
+    let info = Cmd.info "version" ~doc in
+    Cmd.v info cmd_term
+end
+
+(****************************************************************************)
 (* Root command *)
 (****************************************************************************)
 
@@ -521,8 +540,8 @@ let man =
     `P "Report issues at https://github.com/mjambon/ocaml-sbom/issues.";
   ]
 
-let subcommands = [ Gen.cmd; Export.cmd; Apply_overlay.cmd ]
+let subcommands = [ Gen.cmd; Export.cmd; Apply_overlay.cmd; Version.cmd ]
 
 let () =
-  let info = Cmd.info "ocaml-sbom" ~version:"dev" ~doc ~man in
+  let info = Cmd.info "ocaml-sbom" ~version:Version.version ~doc ~man in
   Cmd.group ~default:Gen.cmd_term info subcommands |> Cmd.eval |> exit
