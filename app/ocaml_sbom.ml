@@ -501,7 +501,7 @@ module Version = struct
   let version =
     (* The actual version is inserted here by dune-release *)
     let v = "%%VERSION%%" in
-    if v.[0] = '%' then "dev" else v
+    if v <> "" && v.[0] = '%' then "dev" else v
 
   let run () = print_endline version
   let cmd_term = Term.(const run $ const ())
